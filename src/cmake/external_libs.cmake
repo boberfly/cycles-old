@@ -94,7 +94,7 @@ if(CYCLES_STANDALONE_REPOSITORY)
   # OpenShadingLanguage
   if(WITH_CYCLES_OSL)
     find_package(OpenShadingLanguage REQUIRED)
-    find_package(LLVM REQUIRED)
+    #find_package(LLVM REQUIRED)
   endif()
 
   ####
