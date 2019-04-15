@@ -91,13 +91,15 @@ ccl_device_inline float4 svm_image_texture_read(KernelGlobals *kg, const ccl_glo
 }
 
 /* Calculates the index for sparse volume textures. */
-ccl_device_inline float4 svm_image_texture_read(KernelGlobals *kg,
-                                                const ccl_global SparseTextureInfo *s_info,
-                                                const int *offsets,
+ccl_device_inline float4 svm_image_texture_read_sparse(KernelGlobals *kg,
+                                                const ccl_global TextureInfo *info,
                                                 int id, int x, int y, int z)
 {
-	int tile_start = offsets[(x >> TILE_INDEX_SHIFT) + s_info->tiled_w
-	                 * ((y >> TILE_INDEX_SHIFT) + (z >> TILE_INDEX_SHIFT) * s_info->tiled_h)];
+	const SparseTextureInfo s_info = info->sparse_info;
+	const int *offsets = (const int*)s_info.offsets;
+
+	int tile_start = offsets[(x >> TILE_INDEX_SHIFT) + s_info.tiled_w
+	                 * ((y >> TILE_INDEX_SHIFT) + (z >> TILE_INDEX_SHIFT) * s_info.tiled_h)];
 	if(tile_start < 0) {
 		return make_float4(0.0f, 0.0f, 0.0f, 0.0f);
 	}
@@ -143,8 +145,7 @@ ccl_device_inline float4 svm_image_texture_read_3d(KernelGlobals *kg, int id, in
 	}
 
 	if(info->sparse_info.offsets) {
-		const int *offsets = (const int*)info->sparse_info.offsets
-		return svm_image_texture_read(kg, info->sparse_info, offsets, id, x, y, z);
+		return svm_image_texture_read_sparse(kg, info, id, x, y, z);
 	}
 
 	int offset = x + info->width * y + info->width * info->height * z;
