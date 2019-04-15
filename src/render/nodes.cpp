@@ -260,6 +260,7 @@ ImageTextureNode::~ImageTextureNode()
 {
 	if(image_manager) {
 		image_manager->remove_image(filename.string(),
+		                            string(),
 		                            builtin_data,
 		                            interpolation,
 		                            extension,
@@ -302,12 +303,15 @@ void ImageTextureNode::compile(SVMCompiler& compiler)
 	if(is_float == -1) {
 		ImageMetaData metadata;
 		slot = image_manager->add_image(filename.string(),
+		                                string(),
 		                                builtin_data,
 		                                animated,
 		                                0,
 		                                interpolation,
 		                                extension,
 		                                use_alpha,
+		                                false,
+		                                0.0f,
 		                                metadata);
 		is_float = metadata.is_float;
 		is_linear = metadata.is_linear;
@@ -363,16 +367,19 @@ void ImageTextureNode::compile(OSLCompiler& compiler)
 	if(is_float == -1) {
 		ImageMetaData metadata;
 		if(builtin_data == NULL) {
-			image_manager->get_image_metadata(filename.string(), NULL, metadata);
+			image_manager->get_image_metadata(filename.string(), string(), NULL, metadata);
 		}
 		else {
 			slot = image_manager->add_image(filename.string(),
+			                                string(),
 			                                builtin_data,
 			                                animated,
 			                                0,
 			                                interpolation,
 			                                extension,
 			                                use_alpha,
+			                                false,
+			                                0.0f,
 			                                metadata);
 		}
 		is_float = metadata.is_float;
@@ -457,6 +464,7 @@ EnvironmentTextureNode::~EnvironmentTextureNode()
 {
 	if(image_manager) {
 		image_manager->remove_image(filename.string(),
+		                            string(),
 		                            builtin_data,
 		                            interpolation,
 		                            EXTENSION_REPEAT,
@@ -497,12 +505,15 @@ void EnvironmentTextureNode::compile(SVMCompiler& compiler)
 	if(slot == -1) {
 		ImageMetaData metadata;
 		slot = image_manager->add_image(filename.string(),
+		                                string(),
 		                                builtin_data,
 		                                animated,
 		                                0,
 		                                interpolation,
 		                                EXTENSION_REPEAT,
 		                                use_alpha,
+		                                false,
+		                                0.0f,
 		                                metadata);
 		is_float = metadata.is_float;
 		is_linear = metadata.is_linear;
@@ -549,16 +560,19 @@ void EnvironmentTextureNode::compile(OSLCompiler& compiler)
 	if(is_float == -1) {
 		ImageMetaData metadata;
 		if(builtin_data == NULL) {
-			image_manager->get_image_metadata(filename.string(), NULL, metadata);
+			image_manager->get_image_metadata(filename.string(), string(), NULL, metadata);
 		}
 		else {
 			slot = image_manager->add_image(filename.string(),
+			                                string(),
 			                                builtin_data,
 			                                animated,
 			                                0,
 			                                interpolation,
 			                                EXTENSION_REPEAT,
 			                                use_alpha,
+			                                false,
+			                                0.0f,
 			                                metadata);
 		}
 		is_float = metadata.is_float;
@@ -1496,6 +1510,7 @@ PointDensityTextureNode::~PointDensityTextureNode()
 {
 	if(image_manager) {
 		image_manager->remove_image(filename.string(),
+		                            string(),
 		                            builtin_data,
 		                            interpolation,
 		                            EXTENSION_CLIP,
@@ -1524,11 +1539,15 @@ void PointDensityTextureNode::add_image()
 {
 	if(slot == -1) {
 		ImageMetaData metadata;
-		slot = image_manager->add_image(filename.string(), builtin_data,
+		slot = image_manager->add_image(filename.string(),
+		                                string(),
+		                                builtin_data,
 		                                false, 0,
 		                                interpolation,
 		                                EXTENSION_CLIP,
 		                                true,
+		                                false,
+		                                0.0f,
 		                                metadata);
 	}
 }

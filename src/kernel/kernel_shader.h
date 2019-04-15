@@ -1262,6 +1262,9 @@ ccl_device_inline void shader_eval_volume(KernelGlobals *kg,
 			 * caching matrices instead of recomputing them each step */
 			shader_setup_object_transforms(kg, sd, sd->time);
 #endif
+
+			/* Cache volume P. */
+			sd->P_v = volume_get_position(kg, sd);
 		}
 
 		/* evaluate shader */

@@ -1179,6 +1179,15 @@ void OpenCLDevice::tex_free(device_memory& mem)
 			}
 		}
 	}
+
+	if(mem.grid_info && mem.grid_type == IMAGE_GRID_TYPE_SPARSE) {
+		device_memory *grid_info = (device_memory*)mem.grid_info;
+		if(grid_info->device_pointer) {
+			stats.mem_free(grid_info->device_size);
+			grid_info->device_pointer = 0;
+			grid_info->device_size = 0;
+		}
+	}
 }
 
 size_t OpenCLDevice::global_size_round_up(int group_size, int global_size)
@@ -1306,12 +1315,37 @@ void OpenCLDevice::flush_texture_buffers()
 		if(string_startswith(slot.name, "__tex_image")) {
 			device_memory *mem = textures[slot.name];
 
-			info.width = mem->data_width;
-			info.height = mem->data_height;
-			info.depth = mem->data_depth;
+			info.width = mem->dense_width;
+			info.height = mem->dense_height;
+			info.depth = mem->dense_depth;
 
 			info.interpolation = mem->interpolation;
 			info.extension = mem->extension;
+
+			SparseTextureInfo s_info;
+			s_info.offsets = 0;
+
+			/* If image is sparse, cache info needed for index calculation. */
+			if(mem->grid_info && mem->grid_type == IMAGE_GRID_TYPE_SPARSE) {
+				device_memory *sparse_mem = (device_memory*)mem->grid_info;
+				s_info.offsets = (uint64_t)sparse_mem->host_pointer;
+				s_info.remain_w = info.width % TILE_SIZE;
+				s_info.remain_h = info.height % TILE_SIZE;
+				s_info.tiled_w = info.width / TILE_SIZE + (s_info.remain_w != 0);
+				s_info.tiled_h = info.height / TILE_SIZE + (s_info.remain_h != 0);
+				s_info.div_w = info.width - s_info.remain_w;
+				s_info.div_h = info.height - s_info.remain_h;
+
+				VLOG(1) << "Allocate: " << sparse_mem->name << ", "
+				        << string_human_readable_number(sparse_mem->memory_size()) << " bytes. ("
+				        << string_human_readable_size(sparse_mem->memory_size()) << ")";
+
+				sparse_mem->device_pointer = (device_ptr)sparse_mem->host_pointer;
+				sparse_mem->device_size = sparse_mem->memory_size();
+				stats.mem_alloc(sparse_mem->device_size);
+			}
+
+			info.sparse_info = s_info;
 		}
 	}
 

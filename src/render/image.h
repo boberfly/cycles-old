@@ -64,25 +64,31 @@ public:
 	~ImageManager();
 
 	int add_image(const string& filename,
+	              const string& grid_name,
 	              void *builtin_data,
 	              bool animated,
 	              float frame,
 	              InterpolationType interpolation,
 	              ExtensionType extension,
 	              bool use_alpha,
+	              bool is_volume,
+	              float isovalue,
 	              ImageMetaData& metadata);
 	void remove_image(int flat_slot);
 	void remove_image(const string& filename,
+	                  const string& grid_name,
 	                  void *builtin_data,
 	                  InterpolationType interpolation,
 	                  ExtensionType extension,
 	                  bool use_alpha);
 	void tag_reload_image(const string& filename,
+	                      const string& grid_name,
 	                      void *builtin_data,
 	                      InterpolationType interpolation,
 	                      ExtensionType extension,
 	                      bool use_alpha);
 	bool get_image_metadata(const string& filename,
+	                        const string& grid_name,
 	                        void *builtin_data,
 	                        ImageMetaData& metadata);
 	bool get_image_metadata(int flat_slot,
@@ -131,12 +137,16 @@ public:
 
 	struct Image {
 		string filename;
+		/* For OpenVDB files. Each grid in a .vdb is treated as a separate image. */
+		string grid_name;
 		void *builtin_data;
 		ImageMetaData metadata;
 
 		bool use_alpha;
 		bool need_load;
 		bool animated;
+		bool is_volume;
+		float isovalue;
 		float frame;
 		InterpolationType interpolation;
 		ExtensionType extension;
@@ -160,13 +170,29 @@ private:
 
 	bool file_load_image_generic(Image *img, unique_ptr<ImageInput> *in);
 
+	bool allocate_grid_info(Device *device,
+	                        device_memory *tex_img,
+	                        vector<int> *sparse_index);
+
+	template<typename DeviceType>
+	void file_load_failed(Image *img,
+	                      ImageDataType type,
+	                      device_vector<DeviceType> *tex_img);
+
+#ifdef WITH_OPENVDB
+	template<typename DeviceType>
+	void file_load_extern_vdb(Device *device,
+	                          Image *img,
+	                          ImageDataType type);
+#endif
+
 	template<TypeDesc::BASETYPE FileFormat,
 	         typename StorageType,
 	         typename DeviceType>
-	bool file_load_image(Image *img,
-	                     ImageDataType type,
-	                     int texture_limit,
-	                     device_vector<DeviceType>& tex_img);
+	void file_load_image(Device *device,
+	                     Image *img,
+                         ImageDataType type,
+                         int texture_limit);
 
 	void device_load_image(Device *device,
 	                       Scene *scene,

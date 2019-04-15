@@ -93,6 +93,9 @@ macro(cycles_target_link_libraries target)
 	if(WITH_OPENCOLORIO)
 		target_link_libraries(${target} ${OPENCOLORIO_LIBRARIES})
 	endif()
+	if(WITH_CYCLES_OPENVDB)
+		target_link_libraries(${target} ${OPENVDB_LIBRARIES} ${TBB_LIBRARIES})
+	endif()
 	target_link_libraries(
 		${target}
 		${OPENIMAGEIO_LIBRARIES}

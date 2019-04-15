@@ -73,6 +73,11 @@ set(SRC_HEADERS
 	tile.h
 )
 
+if(WITH_OPENVDB)
+	list(APPEND SRC openvdb.cpp)
+	list(APPEND SRC_HEADERS openvdb.h)
+endif()
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${RTTI_DISABLE_FLAGS}")
 
 include_directories(${INC})

@@ -62,6 +62,14 @@ typedef enum ImageDataType {
 #define IMAGE_DATA_TYPE_SHIFT 3
 #define IMAGE_DATA_TYPE_MASK 0x7
 
+/* Texture Grid Types */
+typedef enum ImageGridType {
+	IMAGE_GRID_TYPE_DEFAULT,
+	IMAGE_GRID_TYPE_SPARSE,
+	IMAGE_GRID_TYPE_SPARSE_PAD,
+	IMAGE_GRID_TYPE_OPENVDB,
+} ImageGridType;
+
 /* Extension types for textures.
  *
  * Defines how the image is extrapolated past its original bounds. */
@@ -76,6 +84,20 @@ typedef enum ExtensionType {
 	EXTENSION_NUM_TYPES,
 } ExtensionType;
 
+/* Sparse Texture Information.
+ *
+ * Data cached to use for converting dense coordinates to sparse. */
+typedef struct SparseTextureInfo {
+	/* Tile offsets for sparse volumes. */
+	uint64_t offsets;
+	/* Dim / TILE_SIZE */
+	uint tiled_w, tiled_h;
+	/* Dim % TILE_SIZE */
+	uint remain_w, remain_h;
+	/* Dim - (Dim % TILE_SIZE) */
+	uint div_w, div_h;
+} SparseTextureInfo;
+
 typedef struct TextureInfo {
 	/* Pointer, offset or texture depending on device. */
 	uint64_t data;
@@ -85,7 +107,18 @@ typedef struct TextureInfo {
 	uint interpolation, extension;
 	/* Dimensions. */
 	uint width, height, depth;
+	/* Extra info for sparse textures. */
+	SparseTextureInfo sparse_info;
 } TextureInfo;
+
+/* Sparse tile size and padding settings. */
+#define TILE_SIZE 8
+/* For bit operations instead of division/modulo of TILE_SIZE */
+#define TILE_INDEX_SHIFT 3
+#define TILE_INDEX_MASK 0x7
+
+#define SPARSE_PAD 1
+#define PADDED_TILE (TILE_SIZE + SPARSE_PAD * 2)
 
 CCL_NAMESPACE_END
 
