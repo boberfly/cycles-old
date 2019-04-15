@@ -990,6 +990,12 @@ typedef ccl_addr_space struct ccl_align(16) ShaderData
   float3 ray_P;
   differential3 ray_dP;
 
+#ifdef __VOLUME__
+	/* Normalized volume position, only set for volumes.
+	 * May be advected for motion blur. */
+	float3 P_v;
+#endif
+
 #ifdef __OSL__
   struct KernelGlobals *osl_globals;
   struct PathState *osl_path_state;
