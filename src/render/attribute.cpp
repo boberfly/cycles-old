@@ -257,6 +257,9 @@ void Attribute::add_with_weight(void* dst, void* src, float weight)
 	else if(same_storage(type, TypeDesc::TypeVector)) {
 		*((float4*)dst) += *((float4*)src) * weight;
 	}
+	else if(same_storage(type, TypeFloat2)) {
+		*((float2*)dst) += *((float2*)src) * weight;
+	}
 	else {
 		assert(!"not implemented for this type");
 	}
