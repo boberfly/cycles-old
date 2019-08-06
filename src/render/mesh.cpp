@@ -580,30 +580,6 @@ void Mesh::clear(bool preserve_voxel_data)
 	patch_table = NULL;
 }
 
-int Mesh::split_vertex(int vertex)
-{
-	/* copy vertex location and vertex attributes */
-	add_vertex_slow(verts[vertex]);
-
-	foreach(Attribute& attr, attributes.attributes) {
-		if(attr.element == ATTR_ELEMENT_VERTEX) {
-			array<char> tmp(attr.data_sizeof());
-			memcpy(tmp.data(), attr.data() + tmp.size()*vertex, tmp.size());
-			attr.add(tmp.data());
-		}
-	}
-
-	foreach(Attribute& attr, subd_attributes.attributes) {
-		if(attr.element == ATTR_ELEMENT_VERTEX) {
-			array<char> tmp(attr.data_sizeof());
-			memcpy(tmp.data(), attr.data() + tmp.size()*vertex, tmp.size());
-			attr.add(tmp.data());
-		}
-	}
-
-	return verts.size() - 1;
-}
-
 void Mesh::add_vertex(float3 P)
 {
 	verts.push_back_reserved(P);
@@ -2168,9 +2144,6 @@ void MeshManager::device_update(Device *device, DeviceScene *dscene, Scene *scen
 
 	/* Tessellate meshes that are using subdivision */
 	if(total_tess_needed) {
-		Camera *dicing_camera = scene->dicing_camera;
-		dicing_camera->update(scene);
-
 		size_t i = 0;
 		foreach(Mesh *mesh, scene->meshes) {
 			if(mesh->need_update &&
@@ -2186,7 +2159,6 @@ void MeshManager::device_update(Device *device, DeviceScene *dscene, Scene *scen
 
 				progress.set_status("Updating Mesh", msg);
 
-				mesh->subd_params->camera = dicing_camera;
 				DiagSplit dsplit(*mesh->subd_params);
 				mesh->tessellate(&dsplit);
 
