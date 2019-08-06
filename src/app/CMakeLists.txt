@@ -36,6 +36,8 @@ endif()
 
 if(NOT CYCLES_STANDALONE_REPOSITORY)
   list(APPEND LIBRARIES bf_intern_glew_mx bf_intern_guardedalloc bf_intern_numaapi)
+else()
+  list(APPEND LIBRARIES extern_numaapi)
 endif()
 
 if(WITH_CYCLES_LOGGING)
