@@ -145,6 +145,13 @@ if(CYCLES_STANDALONE_REPOSITORY)
     find_package(Gflags REQUIRED)
   endif()
 
+  ####
+  # OpenSubdiv
+  if(WITH_CYCLES_OPENSUBDIV)
+    find_package(OpenSubdiv REQUIRED)
+    set(WITH_OPENSUBDIV ON)
+  endif()
+
   unset(_lib_DIR)
 else()
   set(LLVM_LIBRARIES ${LLVM_LIBRARY})
