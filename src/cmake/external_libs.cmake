@@ -151,6 +151,13 @@ if(CYCLES_STANDALONE_REPOSITORY)
     find_package(OpenSubdiv REQUIRED)
     set(WITH_OPENSUBDIV ON)
   endif()
+  
+  ####
+  # OptiX
+  if(WITH_CYCLES_DEVICE_OPTIX)
+    find_package(OptiX REQUIRED)
+    set(WITH_OPTIX ON)
+  endif()
 
   unset(_lib_DIR)
 else()
