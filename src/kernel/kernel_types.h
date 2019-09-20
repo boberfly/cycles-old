@@ -267,6 +267,7 @@ enum PathTraceDimension {
 enum SamplingPattern {
   SAMPLING_PATTERN_SOBOL = 0,
   SAMPLING_PATTERN_CMJ = 1,
+  SAMPLING_PATTERN_PMJ = 2,
 
   SAMPLING_NUM_PATTERNS,
 };
@@ -371,6 +372,8 @@ typedef enum PassType {
 #endif
   PASS_RENDER_TIME,
   PASS_CRYPTOMATTE,
+  PASS_ADAPTIVE_AUX_BUFFER,
+  PASS_SAMPLE_COUNT,
   PASS_CATEGORY_MAIN_END = 31,
 
   PASS_MIST = 32,
@@ -1227,6 +1230,9 @@ typedef struct KernelFilm {
   int cryptomatte_passes;
   int cryptomatte_depth;
   int pass_cryptomatte;
+  
+  int pass_adaptive_aux_buffer;
+  int pass_sample_count;
 
   int pass_mist;
   float mist_start;
@@ -1242,7 +1248,7 @@ typedef struct KernelFilm {
   float4 xyz_to_r;
   float4 xyz_to_g;
   float4 xyz_to_b;
-  float4 rgb_to_y;
+  float4 rgb_to_y; //50
 
 #ifdef __KERNEL_DEBUG__
   int pass_bvh_traversed_nodes;
@@ -1257,6 +1263,8 @@ typedef struct KernelFilm {
   int display_divide_pass_stride;
   int use_display_exposure;
   int use_display_pass_alpha;
+
+  int pad1, pad2;
 } KernelFilm;
 static_assert_align(KernelFilm, 16);
 
@@ -1338,6 +1346,8 @@ typedef struct KernelIntegrator {
   /* sampler */
   int sampling_pattern;
   int aa_samples;
+  int adaptive_min_samples;
+  float adaptive_threshold;
 
   /* volume render */
   int use_volumes;
@@ -1349,7 +1359,7 @@ typedef struct KernelIntegrator {
 
   int max_closures;
 
-  int pad1;
+  int pad1, pad2, pad3;
 } KernelIntegrator;
 static_assert_align(KernelIntegrator, 16);
 
