@@ -84,6 +84,10 @@ if(WITH_CYCLES_OSL)
     cycles_kernel_osl
   )
 endif()
+if(WITH_OPENVDB)
+  list(APPEND SRC openvdb.cpp)
+  list(APPEND SRC_HEADERS openvdb.h)
+endif()
 
 include_directories(${INC})
 include_directories(SYSTEM ${INC_SYS})
