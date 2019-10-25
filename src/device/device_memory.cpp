@@ -36,7 +36,8 @@ device_memory::device_memory(Device *device, const char *name, MemoryType type)
       device(device),
       device_pointer(0),
       host_pointer(0),
-      shared_pointer(0)
+      shared_pointer(0),
+      grid_info(0)
 {
 }
 
@@ -59,7 +60,8 @@ device_memory::device_memory(device_memory &&other)
       device(other.device),
       device_pointer(other.device_pointer),
       host_pointer(other.host_pointer),
-      shared_pointer(other.shared_pointer)
+      shared_pointer(other.shared_pointer),
+      grid_info(other.grid_info)
 {
   other.device_size = 0;
   other.device_pointer = 0;

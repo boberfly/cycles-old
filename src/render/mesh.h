@@ -259,6 +259,7 @@ class Mesh : public Node {
 
   uint motion_steps;
   bool use_motion_blur;
+  bool use_volume_motion_blur; /* Motion blur for volume data within mesh. */
 
   /* Update Flags */
   bool need_update;

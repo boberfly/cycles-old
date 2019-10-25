@@ -1256,6 +1256,26 @@ class CUDADevice : public Device {
     info.width = mem.data_width;
     info.height = mem.data_height;
     info.depth = mem.data_depth;
+    info.sparse_info.offsets = 0;
+
+    /* If image is sparse, cache info needed for index calculation. */
+    if(mem.grid_info && mem.grid_type == IMAGE_GRID_TYPE_SPARSE_PAD) {
+      device_memory *sparse_mem = (device_memory*)mem.grid_info;
+      info.sparse_info.offsets = (uint64_t)sparse_mem->host_pointer;
+      info.sparse_info.tiled_w = (mem.dense_width / TILE_SIZE) +
+                                 (mem.dense_width % TILE_SIZE != 0);
+      info.sparse_info.tiled_h = (mem.dense_height / TILE_SIZE) +
+                                 (mem.dense_height % TILE_SIZE != 0);
+
+      VLOG(1) << "Allocate: " << sparse_mem->name << ", "
+              << string_human_readable_number(sparse_mem->memory_size()) << " bytes. ("
+              << string_human_readable_size(sparse_mem->memory_size()) << ")";
+
+      sparse_mem->device_pointer = (device_ptr)sparse_mem->host_pointer;
+      sparse_mem->device_size = sparse_mem->memory_size();
+      stats.mem_alloc(sparse_mem->device_size);
+    }
+
     need_texture_info = true;
   }
 
