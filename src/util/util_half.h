@@ -55,6 +55,12 @@ class half {
     v = i;
     return *this;
   }
+  friend bool operator==(const half& a, const half& b) { return a.v == b.v; }
+  friend bool operator!=(const half& a, const half& b) { return a.v != b.v; }
+  friend bool operator<(const half& a, const half& b) { return a.v < b.v; }
+  friend bool operator>(const half& a, const half& b) { return a.v > b.v; }
+  friend bool operator<=(const half& a, const half& b) { return a.v <= b.v; }
+  friend bool operator>=(const half& a, const half& b) { return a.v >= b.v; }
 
  private:
   unsigned short v;
@@ -158,6 +164,18 @@ ccl_device_inline half float_to_half(float f)
   value_bits = (exponent_bits == 0 ? 0 : value_bits);
   /* Re-insert sign bit and return. */
   return (value_bits | sign_bit);
+}
+
+ccl_device_inline half4 make_half4(half h)
+{
+  half4 a = {h, h, h, h};
+  return a;
+}
+
+ccl_device_inline half4 make_half4(half x, half y, half z, half w)
+{
+  half4 a = {x, y, z, w};
+  return a;
 }
 
 #  endif

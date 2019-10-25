@@ -266,7 +266,7 @@ ImageTextureNode::~ImageTextureNode()
 {
   if (image_manager) {
     image_manager->remove_image(
-        filename.string(), builtin_data, interpolation, extension, alpha_type, colorspace);
+        filename.string(), string(), builtin_data, interpolation, extension, alpha_type, colorspace);
   }
 }
 
@@ -304,6 +304,7 @@ void ImageTextureNode::compile(SVMCompiler &compiler)
   if (is_float == -1) {
     ImageMetaData metadata;
     slot = image_manager->add_image(filename.string(),
+                                    string(),
                                     builtin_data,
                                     animated,
                                     0,
@@ -311,6 +312,8 @@ void ImageTextureNode::compile(SVMCompiler &compiler)
                                     extension,
                                     alpha_type,
                                     colorspace,
+                                    false,
+                                    0.0f,
                                     metadata);
     is_float = metadata.is_float;
     compress_as_srgb = metadata.compress_as_srgb;
@@ -379,10 +382,11 @@ void ImageTextureNode::compile(OSLCompiler &compiler)
   if (is_float == -1) {
     ImageMetaData metadata;
     if (builtin_data == NULL) {
-      image_manager->get_image_metadata(filename.string(), NULL, colorspace, metadata);
+      image_manager->get_image_metadata(filename.string(), string(), NULL, colorspace, metadata);
     }
     else {
       slot = image_manager->add_image(filename.string(),
+                                      string(),
                                       builtin_data,
                                       animated,
                                       0,
@@ -390,6 +394,8 @@ void ImageTextureNode::compile(OSLCompiler &compiler)
                                       extension,
                                       alpha_type,
                                       colorspace,
+                                      false,
+                                      0.0f,
                                       metadata);
     }
     is_float = metadata.is_float;
@@ -475,7 +481,7 @@ EnvironmentTextureNode::~EnvironmentTextureNode()
 {
   if (image_manager) {
     image_manager->remove_image(
-        filename.string(), builtin_data, interpolation, EXTENSION_REPEAT, alpha_type, colorspace);
+        filename.string(), string(), builtin_data, interpolation, EXTENSION_REPEAT, alpha_type, colorspace);
   }
 }
 
@@ -511,6 +517,7 @@ void EnvironmentTextureNode::compile(SVMCompiler &compiler)
   if (slot == -1) {
     ImageMetaData metadata;
     slot = image_manager->add_image(filename.string(),
+                                    string(),
                                     builtin_data,
                                     animated,
                                     0,
@@ -518,6 +525,8 @@ void EnvironmentTextureNode::compile(SVMCompiler &compiler)
                                     EXTENSION_REPEAT,
                                     alpha_type,
                                     colorspace,
+                                    false,
+                                    0.0f,
                                     metadata);
     is_float = metadata.is_float;
     compress_as_srgb = metadata.compress_as_srgb;
@@ -567,10 +576,11 @@ void EnvironmentTextureNode::compile(OSLCompiler &compiler)
   if (is_float == -1) {
     ImageMetaData metadata;
     if (builtin_data == NULL) {
-      image_manager->get_image_metadata(filename.string(), NULL, colorspace, metadata);
+      image_manager->get_image_metadata(filename.string(), string(), NULL, colorspace, metadata);
     }
     else {
       slot = image_manager->add_image(filename.string(),
+                                      string(),
                                       builtin_data,
                                       animated,
                                       0,
@@ -578,6 +588,8 @@ void EnvironmentTextureNode::compile(OSLCompiler &compiler)
                                       EXTENSION_REPEAT,
                                       alpha_type,
                                       colorspace,
+                                      false,
+                                      0.0f,
                                       metadata);
     }
     is_float = metadata.is_float;
@@ -1611,6 +1623,7 @@ PointDensityTextureNode::~PointDensityTextureNode()
 {
   if (image_manager) {
     image_manager->remove_image(filename.string(),
+                                string(),
                                 builtin_data,
                                 interpolation,
                                 EXTENSION_CLIP,
@@ -1643,6 +1656,7 @@ void PointDensityTextureNode::add_image()
   if (slot == -1) {
     ImageMetaData metadata;
     slot = image_manager->add_image(filename.string(),
+                                    string(),
                                     builtin_data,
                                     false,
                                     0,
@@ -1650,6 +1664,8 @@ void PointDensityTextureNode::add_image()
                                     EXTENSION_CLIP,
                                     IMAGE_ALPHA_AUTO,
                                     u_colorspace_raw,
+                                    false,
+                                    0.0f,
                                     metadata);
   }
 }
