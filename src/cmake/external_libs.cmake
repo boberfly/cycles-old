@@ -159,6 +159,14 @@ if(CYCLES_STANDALONE_REPOSITORY)
     set(WITH_OPTIX ON)
   endif()
 
+  ####
+  # OpenVDB
+  if(WITH_CYCLES_OPENVDB)
+    find_package(OpenVDB REQUIRED)
+    find_package(TBB REQUIRED)
+    set(WITH_OPENVDB ON)
+  endif()
+
   unset(_lib_DIR)
 else()
   set(LLVM_LIBRARIES ${LLVM_LIBRARY})

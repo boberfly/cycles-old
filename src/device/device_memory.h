@@ -206,10 +206,16 @@ class device_memory {
   size_t data_width;
   size_t data_height;
   size_t data_depth;
+  /* data_* stores actual dimensions, while dense_* stores image dimensions
+   * before compression. */
+  size_t dense_width;
+  size_t dense_height;
+  size_t dense_depth;
   MemoryType type;
   const char *name;
   InterpolationType interpolation;
   ExtensionType extension;
+  ImageGridType grid_type;
 
   /* Pointers. */
   Device *device;
@@ -218,6 +224,7 @@ class device_memory {
   void *shared_pointer;
   /* reference counter for shared_pointer */
   int shared_counter;
+  void *grid_info;
 
   virtual ~device_memory();
 
