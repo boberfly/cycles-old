@@ -290,22 +290,18 @@ static PyObject *render_func(PyObject * /*self*/, PyObject *args)
 /* pixel_array and result passed as pointers */
 static PyObject *bake_func(PyObject * /*self*/, PyObject *args)
 {
-  PyObject *pysession, *pydepsgraph, *pyobject;
+  PyObject *pysession, *pydepsgraph, *pybakepass, *pyobject;
   PyObject *pypixel_array, *pyresult;
-  const char *pass_type;
-  int num_pixels, depth, object_id, pass_filter;
+  int object_id;
 
   if (!PyArg_ParseTuple(args,
-                        "OOOsiiOiiO",
+                        "OOOOiOO",
                         &pysession,
                         &pydepsgraph,
+                        &pybakepass,
                         &pyobject,
-                        &pass_type,
-                        &pass_filter,
                         &object_id,
                         &pypixel_array,
-                        &num_pixels,
-                        &depth,
                         &pyresult))
     return NULL;
 
@@ -315,11 +311,17 @@ static PyObject *bake_func(PyObject * /*self*/, PyObject *args)
   RNA_pointer_create(NULL, &RNA_Depsgraph, PyLong_AsVoidPtr(pydepsgraph), &depsgraphptr);
   BL::Depsgraph b_depsgraph(depsgraphptr);
 
+  PointerRNA bakepassptr;
+  RNA_pointer_create(NULL, &RNA_BakePass, PyLong_AsVoidPtr(pybakepass), &bakepassptr);
+  BL::BakePass b_bakepass(bakepassptr);
+
   PointerRNA objectptr;
   RNA_id_pointer_create((ID *)PyLong_AsVoidPtr(pyobject), &objectptr);
   BL::Object b_object(objectptr);
 
-  void *b_result = PyLong_AsVoidPtr(pyresult);
+  PointerRNA resultptr;
+  RNA_pointer_create(NULL, &RNA_BakeResult, PyLong_AsVoidPtr(pyresult), &resultptr);
+  BL::BakeResult b_result(resultptr);
 
   PointerRNA bakepixelptr;
   RNA_pointer_create(NULL, &RNA_BakePixel, PyLong_AsVoidPtr(pypixel_array), &bakepixelptr);
@@ -327,15 +329,7 @@ static PyObject *bake_func(PyObject * /*self*/, PyObject *args)
 
   python_thread_state_save(&session->python_thread_state);
 
-  session->bake(b_depsgraph,
-                b_object,
-                pass_type,
-                pass_filter,
-                object_id,
-                b_bake_pixel,
-                (size_t)num_pixels,
-                depth,
-                (float *)b_result);
+  session->bake(b_depsgraph, b_bakepass, b_object, object_id, b_bake_pixel, b_result);
 
   python_thread_state_restore(&session->python_thread_state);
 

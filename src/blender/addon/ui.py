@@ -918,6 +918,37 @@ class CYCLES_RENDER_PT_passes_debug(CyclesButtonsPanel, Panel):
         layout.prop(cycles_view_layer, "pass_debug_ray_bounces")
 
 
+class CYCLES_RENDER_UL_aov(bpy.types.UIList):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
+        row = layout.row()
+        row.label(icon='RENDER_RESULT')
+        split = row.split(factor=0.65, align=True)
+        split.prop(item, "name", text="")
+        split.prop(item, "type", text="")
+
+
+class CYCLES_RENDER_PT_passes_aov(CyclesButtonsPanel, Panel):
+    bl_label = "AOV"
+    bl_context = "view_layer"
+    bl_parent_id = "CYCLES_RENDER_PT_passes"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+
+        cycles_view_layer = context.view_layer.cycles
+
+        row = layout.row()
+        col = row.column()
+        col.template_list("CYCLES_RENDER_UL_aov", "", cycles_view_layer, "aovs", cycles_view_layer, "active_aov", rows=2)
+
+        col = row.column()
+        sub = col.column(align=True)
+        sub.operator("cycles.add_aov", icon='ADD', text="")
+        sub.operator("cycles.remove_aov", icon='REMOVE', text="")
+
+
 class CYCLES_RENDER_PT_denoising(CyclesButtonsPanel, Panel):
     bl_label = "Denoising"
     bl_context = "view_layer"
@@ -1765,159 +1796,65 @@ class CYCLES_MATERIAL_PT_settings_volume(CyclesButtonsPanel, Panel):
 
 
 class CYCLES_RENDER_PT_bake(CyclesButtonsPanel, Panel):
-    bl_label = "Bake"
-    bl_context = "render"
-    bl_options = {'DEFAULT_CLOSED'}
+    bl_label = "Cycles Baking"
+    bl_context = "object"
+    bl_parent_id = "OBJECT_PT_bake_passes"
     COMPAT_ENGINES = {'CYCLES'}
-
     @classmethod
     def poll(cls, context):
-        return CyclesButtonsPanel.poll(context) and not use_optix(context)
+        scene = context.scene
+        rd = scene.render
+        bp = context.object.bake_passes.active
+        return context.engine in cls.COMPAT_ENGINES \
+               and not rd.use_bake_multires and bp \
+               and not use_optix(context)
 
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
         layout.use_property_decorate = False  # No animation.
 
-        scene = context.scene
-        cscene = scene.cycles
-        cbk = scene.render.bake
-        rd = scene.render
+        bp = context.object.bake_passes.active
+        cbp = bp.cycles
 
-        if rd.use_bake_multires:
-            layout.operator("object.bake_image", icon='RENDER_STILL')
-            layout.prop(rd, "use_bake_multires")
-            layout.prop(rd, "bake_type")
-
-        else:
-            layout.operator("object.bake", icon='RENDER_STILL').type = cscene.bake_type
-            layout.prop(rd, "use_bake_multires")
-            layout.prop(cscene, "bake_type")
-
-
-class CYCLES_RENDER_PT_bake_influence(CyclesButtonsPanel, Panel):
-    bl_label = "Influence"
-    bl_context = "render"
-    bl_parent_id = "CYCLES_RENDER_PT_bake"
-    COMPAT_ENGINES = {'CYCLES'}
-    @classmethod
-    def poll(cls, context):
-        scene = context.scene
-        cscene = scene.cycles
-        rd = scene.render
-        if rd.use_bake_multires == False and cscene.bake_type in {
-                'NORMAL', 'COMBINED', 'DIFFUSE', 'GLOSSY', 'TRANSMISSION', 'SUBSURFACE'}:
-            return True
-
-    def draw(self, context):
-        layout = self.layout
-        layout.use_property_split = True
-        layout.use_property_decorate = False  # No animation.
-
-        scene = context.scene
-        cscene = scene.cycles
-        cbk = scene.render.bake
-        rd = scene.render
+        layout.prop(cbp, "bake_type")
+        layout.prop(cbp, "samples")
 
         col = layout.column()
 
-        if cscene.bake_type == 'NORMAL':
-            col.prop(cbk, "normal_space", text="Space")
+        if cbp.bake_type == 'NORMAL':
+            col.prop(bp, "normal_space", text="Space")
 
             sub = col.column(align=True)
-            sub.prop(cbk, "normal_r", text="Swizzle R")
-            sub.prop(cbk, "normal_g", text="G")
-            sub.prop(cbk, "normal_b", text="B")
+            sub.prop(bp, "normal_r", text="Swizzle R")
+            sub.prop(bp, "normal_g", text="G")
+            sub.prop(bp, "normal_b", text="B")
 
-        elif cscene.bake_type == 'COMBINED':
+        elif cbp.bake_type == 'COMBINED':
             row = col.row(align=True)
             row.use_property_split = False
-            row.prop(cbk, "use_pass_direct", toggle=True)
-            row.prop(cbk, "use_pass_indirect", toggle=True)
+            row.prop(cbp, "use_pass_direct", toggle=True)
+            row.prop(cbp, "use_pass_indirect", toggle=True)
 
             flow = col.grid_flow(row_major=False, columns=0, even_columns=False, even_rows=False, align=True)
 
-            flow.active = cbk.use_pass_direct or cbk.use_pass_indirect
-            flow.prop(cbk, "use_pass_diffuse")
-            flow.prop(cbk, "use_pass_glossy")
-            flow.prop(cbk, "use_pass_transmission")
-            flow.prop(cbk, "use_pass_subsurface")
-            flow.prop(cbk, "use_pass_ambient_occlusion")
-            flow.prop(cbk, "use_pass_emit")
+            flow.active = cbp.use_pass_direct or cbp.use_pass_indirect
+            flow.prop(cbp, "use_pass_diffuse")
+            flow.prop(cbp, "use_pass_glossy")
+            flow.prop(cbp, "use_pass_transmission")
+            flow.prop(cbp, "use_pass_subsurface")
+            flow.prop(cbp, "use_pass_ambient_occlusion")
+            flow.prop(cbp, "use_pass_emit")
 
-        elif cscene.bake_type in {'DIFFUSE', 'GLOSSY', 'TRANSMISSION', 'SUBSURFACE'}:
+        elif cbp.bake_type in {'DIFFUSE', 'GLOSSY', 'TRANSMISSION', 'SUBSURFACE'}:
             row = col.row(align=True)
             row.use_property_split = False
-            row.prop(cbk, "use_pass_direct", toggle=True)
-            row.prop(cbk, "use_pass_indirect", toggle=True)
-            row.prop(cbk, "use_pass_color", toggle=True)
+            row.prop(cbp, "use_pass_direct", toggle=True)
+            row.prop(cbp, "use_pass_indirect", toggle=True)
+            row.prop(cbp, "use_pass_color", toggle=True)
 
-
-class CYCLES_RENDER_PT_bake_selected_to_active(CyclesButtonsPanel, Panel):
-    bl_label = "Selected to Active"
-    bl_context = "render"
-    bl_parent_id = "CYCLES_RENDER_PT_bake"
-    bl_options = {'DEFAULT_CLOSED'}
-    COMPAT_ENGINES = {'CYCLES'}
-
-    @classmethod
-    def poll(cls, context):
-        scene = context.scene
-        rd = scene.render
-        return rd.use_bake_multires == False
-
-    def draw_header(self, context):
-        scene = context.scene
-        cbk = scene.render.bake
-        self.layout.prop(cbk, "use_selected_to_active", text="")
-
-    def draw(self, context):
-        layout = self.layout
-        layout.use_property_split = True
-        layout.use_property_decorate = False  # No animation.
-
-        scene = context.scene
-        cscene = scene.cycles
-        cbk = scene.render.bake
-        rd = scene.render
-
-        layout.active = cbk.use_selected_to_active
-        col = layout.column()
-
-        col.prop(cbk, "use_cage", text="Cage")
-        if cbk.use_cage:
-            col.prop(cbk, "cage_extrusion", text="Extrusion")
-            col.prop(cbk, "cage_object", text="Cage Object")
-        else:
-            col.prop(cbk, "cage_extrusion", text="Ray Distance")
-
-
-class CYCLES_RENDER_PT_bake_output(CyclesButtonsPanel, Panel):
-    bl_label = "Output"
-    bl_context = "render"
-    bl_parent_id = "CYCLES_RENDER_PT_bake"
-    COMPAT_ENGINES = {'CYCLES'}
-
-    def draw(self, context):
-        layout = self.layout
-        layout.use_property_split = True
-        layout.use_property_decorate = False  # No animation.
-
-        scene = context.scene
-        cscene = scene.cycles
-        cbk = scene.render.bake
-        rd = scene.render
-
-        if rd.use_bake_multires:
-            layout.prop(rd, "bake_margin")
-            layout.prop(rd, "use_bake_clear", text="Clear Image")
-
-            if rd.bake_type == 'DISPLACEMENT':
-                col.prop(rd, "use_bake_lores_mesh")
-        else:
-
-            layout.prop(cbk, "margin")
-            layout.prop(cbk, "use_clear", text="Clear Image")
+        elif cbp.bake_type in {'AOV_COLOR', 'AOV_VALUE'}:
+            col.prop(cbp, "aov_name")
 
 
 class CYCLES_RENDER_PT_debug(CyclesButtonsPanel, Panel):
@@ -2233,6 +2170,8 @@ classes = (
     CYCLES_RENDER_PT_passes_light,
     CYCLES_RENDER_PT_passes_crypto,
     CYCLES_RENDER_PT_passes_debug,
+    CYCLES_RENDER_UL_aov,
+    CYCLES_RENDER_PT_passes_aov,
     CYCLES_RENDER_PT_filter,
     CYCLES_RENDER_PT_override,
     CYCLES_RENDER_PT_denoising,
@@ -2265,9 +2204,6 @@ classes = (
     CYCLES_MATERIAL_PT_settings_surface,
     CYCLES_MATERIAL_PT_settings_volume,
     CYCLES_RENDER_PT_bake,
-    CYCLES_RENDER_PT_bake_influence,
-    CYCLES_RENDER_PT_bake_selected_to_active,
-    CYCLES_RENDER_PT_bake_output,
     CYCLES_RENDER_PT_debug,
     node_panel(CYCLES_MATERIAL_PT_settings),
     node_panel(CYCLES_MATERIAL_PT_settings_surface),

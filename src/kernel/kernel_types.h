@@ -222,6 +222,8 @@ typedef enum ShaderEvalType {
   SHADER_EVAL_TRANSMISSION_COLOR,
   SHADER_EVAL_SUBSURFACE_COLOR,
   SHADER_EVAL_EMISSION,
+  SHADER_EVAL_AOV_COLOR,
+  SHADER_EVAL_AOV_VALUE,
 
   /* light passes */
   SHADER_EVAL_AO,
@@ -325,7 +327,9 @@ enum PathRayFlag {
   /* Ray is to be terminated. */
   PATH_RAY_TERMINATE = (PATH_RAY_TERMINATE_IMMEDIATE | PATH_RAY_TERMINATE_AFTER_TRANSPARENT),
   /* Path and shader is being evaluated for direct lighting emission. */
-  PATH_RAY_EMISSION = (1 << 22)
+  PATH_RAY_EMISSION = (1 << 22),
+  /* Shader is being evaluated for AOV baking. */
+  PATH_RAY_BAKE_AOV = (1 << 23),
 };
 
 /* Closure Label */
@@ -371,6 +375,8 @@ typedef enum PassType {
 #endif
   PASS_RENDER_TIME,
   PASS_CRYPTOMATTE,
+  PASS_AOV_COLOR,
+  PASS_AOV_VALUE,
   PASS_CATEGORY_MAIN_END = 31,
 
   PASS_MIST = 32,
@@ -999,9 +1005,18 @@ typedef ccl_addr_space struct ccl_align(16) ShaderData
   uint lcg_state;
 
   /* Closure data, we store a fixed array of closures */
-  int num_closure;
-  int num_closure_left;
-  float randb_closure;
+  union {
+    struct {
+      int num_closure;
+      int num_closure_left;
+      float randb_closure;
+    };
+    /* Used to store the AOV color/value during AOV baking.
+     * For that we don't care about closures so we can share the space. */
+    struct {
+      float aov_value[3];
+    };
+  };
   float3 svm_closure_weight;
 
   /* Closure weights summed directly, so we can evaluate
@@ -1242,6 +1257,11 @@ typedef struct KernelFilm {
   int pass_denoising_data;
   int pass_denoising_clean;
   int denoising_flags;
+
+  int pass_aov_color;
+  int pass_aov_value;
+  int pad1;
+  int pad2;
 
   /* XYZ to rendering color space transform. float4 instead of float3 to
    * ensure consistent padding/alignment across devices. */

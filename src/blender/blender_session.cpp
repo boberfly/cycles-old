@@ -261,52 +261,6 @@ void BlenderSession::free_session()
   delete session;
 }
 
-static ShaderEvalType get_shader_type(const string &pass_type)
-{
-  const char *shader_type = pass_type.c_str();
-
-  /* data passes */
-  if (strcmp(shader_type, "NORMAL") == 0)
-    return SHADER_EVAL_NORMAL;
-  else if (strcmp(shader_type, "UV") == 0)
-    return SHADER_EVAL_UV;
-  else if (strcmp(shader_type, "ROUGHNESS") == 0)
-    return SHADER_EVAL_ROUGHNESS;
-  else if (strcmp(shader_type, "DIFFUSE_COLOR") == 0)
-    return SHADER_EVAL_DIFFUSE_COLOR;
-  else if (strcmp(shader_type, "GLOSSY_COLOR") == 0)
-    return SHADER_EVAL_GLOSSY_COLOR;
-  else if (strcmp(shader_type, "TRANSMISSION_COLOR") == 0)
-    return SHADER_EVAL_TRANSMISSION_COLOR;
-  else if (strcmp(shader_type, "SUBSURFACE_COLOR") == 0)
-    return SHADER_EVAL_SUBSURFACE_COLOR;
-  else if (strcmp(shader_type, "EMIT") == 0)
-    return SHADER_EVAL_EMISSION;
-
-  /* light passes */
-  else if (strcmp(shader_type, "AO") == 0)
-    return SHADER_EVAL_AO;
-  else if (strcmp(shader_type, "COMBINED") == 0)
-    return SHADER_EVAL_COMBINED;
-  else if (strcmp(shader_type, "SHADOW") == 0)
-    return SHADER_EVAL_SHADOW;
-  else if (strcmp(shader_type, "DIFFUSE") == 0)
-    return SHADER_EVAL_DIFFUSE;
-  else if (strcmp(shader_type, "GLOSSY") == 0)
-    return SHADER_EVAL_GLOSSY;
-  else if (strcmp(shader_type, "TRANSMISSION") == 0)
-    return SHADER_EVAL_TRANSMISSION;
-  else if (strcmp(shader_type, "SUBSURFACE") == 0)
-    return SHADER_EVAL_SUBSURFACE;
-
-  /* extra */
-  else if (strcmp(shader_type, "ENVIRONMENT") == 0)
-    return SHADER_EVAL_ENVIRONMENT;
-
-  else
-    return SHADER_EVAL_BAKE;
-}
-
 static BL::RenderResult begin_render_result(BL::RenderEngine &b_engine,
                                             int x,
                                             int y,
@@ -622,45 +576,109 @@ static void populate_bake_data(BakeData *data,
   }
 }
 
-static int bake_pass_filter_get(const int pass_filter)
+static bool shader_is_color(ShaderEvalType type)
+{
+  switch (type) {
+    case SHADER_EVAL_NORMAL:
+    case SHADER_EVAL_UV:
+    case SHADER_EVAL_AOV_VALUE:
+      /* TODO: SHADER_EVAL_ROUGHNESS? SHADER_EVAL_SHADOW? */
+      return false;
+    default:
+      return true;
+  }
+}
+
+static ShaderEvalType get_shader_type(const string &pass_type)
+{
+  const char *shader_type = pass_type.c_str();
+
+  /* data passes */
+  if (strcmp(shader_type, "NORMAL") == 0)
+    return SHADER_EVAL_NORMAL;
+  else if (strcmp(shader_type, "UV") == 0)
+    return SHADER_EVAL_UV;
+  else if (strcmp(shader_type, "ROUGHNESS") == 0)
+    return SHADER_EVAL_ROUGHNESS;
+  else if (strcmp(shader_type, "DIFFUSE_COLOR") == 0)
+    return SHADER_EVAL_DIFFUSE_COLOR;
+  else if (strcmp(shader_type, "GLOSSY_COLOR") == 0)
+    return SHADER_EVAL_GLOSSY_COLOR;
+  else if (strcmp(shader_type, "TRANSMISSION_COLOR") == 0)
+    return SHADER_EVAL_TRANSMISSION_COLOR;
+  else if (strcmp(shader_type, "SUBSURFACE_COLOR") == 0)
+    return SHADER_EVAL_SUBSURFACE_COLOR;
+  else if (strcmp(shader_type, "EMIT") == 0)
+    return SHADER_EVAL_EMISSION;
+  else if (strcmp(shader_type, "AOV_COLOR") == 0)
+    return SHADER_EVAL_AOV_COLOR;
+  else if (strcmp(shader_type, "AOV_VALUE") == 0)
+    return SHADER_EVAL_AOV_VALUE;
+
+  /* light passes */
+  else if (strcmp(shader_type, "AO") == 0)
+    return SHADER_EVAL_AO;
+  else if (strcmp(shader_type, "COMBINED") == 0)
+    return SHADER_EVAL_COMBINED;
+  else if (strcmp(shader_type, "SHADOW") == 0)
+    return SHADER_EVAL_SHADOW;
+  else if (strcmp(shader_type, "DIFFUSE") == 0)
+    return SHADER_EVAL_DIFFUSE;
+  else if (strcmp(shader_type, "GLOSSY") == 0)
+    return SHADER_EVAL_GLOSSY;
+  else if (strcmp(shader_type, "TRANSMISSION") == 0)
+    return SHADER_EVAL_TRANSMISSION;
+  else if (strcmp(shader_type, "SUBSURFACE") == 0)
+    return SHADER_EVAL_SUBSURFACE;
+
+  /* extra */
+  else if (strcmp(shader_type, "ENVIRONMENT") == 0)
+    return SHADER_EVAL_ENVIRONMENT;
+
+  else
+    return SHADER_EVAL_BAKE;
+}
+
+static int bake_pass_filter_get(PointerRNA cbp)
 {
   int flag = BAKE_FILTER_NONE;
 
-  if ((pass_filter & BL::BakeSettings::pass_filter_DIRECT) != 0)
+  if (get_boolean(cbp, "use_pass_direct"))
     flag |= BAKE_FILTER_DIRECT;
-  if ((pass_filter & BL::BakeSettings::pass_filter_INDIRECT) != 0)
+  if (get_boolean(cbp, "use_pass_indirect"))
     flag |= BAKE_FILTER_INDIRECT;
-  if ((pass_filter & BL::BakeSettings::pass_filter_COLOR) != 0)
+  if (get_boolean(cbp, "use_pass_color"))
     flag |= BAKE_FILTER_COLOR;
 
-  if ((pass_filter & BL::BakeSettings::pass_filter_DIFFUSE) != 0)
+  if (get_boolean(cbp, "use_pass_diffuse"))
     flag |= BAKE_FILTER_DIFFUSE;
-  if ((pass_filter & BL::BakeSettings::pass_filter_GLOSSY) != 0)
+  if (get_boolean(cbp, "use_pass_glossy"))
     flag |= BAKE_FILTER_GLOSSY;
-  if ((pass_filter & BL::BakeSettings::pass_filter_TRANSMISSION) != 0)
+  if (get_boolean(cbp, "use_pass_transmission"))
     flag |= BAKE_FILTER_TRANSMISSION;
-  if ((pass_filter & BL::BakeSettings::pass_filter_SUBSURFACE) != 0)
+  if (get_boolean(cbp, "use_pass_subsurface"))
     flag |= BAKE_FILTER_SUBSURFACE;
 
-  if ((pass_filter & BL::BakeSettings::pass_filter_EMIT) != 0)
+  if (get_boolean(cbp, "use_pass_emit"))
     flag |= BAKE_FILTER_EMISSION;
-  if ((pass_filter & BL::BakeSettings::pass_filter_AO) != 0)
+  if (get_boolean(cbp, "use_pass_ambient_occlusion"))
     flag |= BAKE_FILTER_AO;
 
   return flag;
 }
 
 void BlenderSession::bake(BL::Depsgraph &b_depsgraph_,
+                          BL::BakePass &b_bakepass,
                           BL::Object &b_object,
-                          const string &pass_type,
-                          const int pass_filter,
                           const int object_id,
                           BL::BakePixel &pixel_array,
-                          const size_t num_pixels,
-                          const int /*depth*/,
-                          float result[])
+                          BL::BakeResult &b_result)
 {
   b_depsgraph = b_depsgraph_;
+
+  PointerRNA cbp = RNA_pointer_get(&b_bakepass.ptr, "cycles");
+
+  string pass_type = get_enum_identifier(cbp, "bake_type");
 
   ShaderEvalType shader_type = get_shader_type(pass_type);
 
@@ -677,12 +695,23 @@ void BlenderSession::bake(BL::Depsgraph &b_depsgraph_,
     Pass::add(PASS_UV, scene->film->passes);
   }
 
-  int bake_pass_filter = bake_pass_filter_get(pass_filter);
+  int bake_pass_filter = bake_pass_filter_get(cbp);
   bake_pass_filter = BakeManager::shader_type_to_pass_filter(shader_type, bake_pass_filter);
 
   /* force use_light_pass to be true if we bake more than just colors */
   if (bake_pass_filter & ~BAKE_FILTER_COLOR) {
     Pass::add(PASS_LIGHT, scene->film->passes);
+  }
+
+  /* If we're baking an AOV pass, add it to the film so that the corresponding
+   * nodes get compiled. */
+  if (shader_type == SHADER_EVAL_AOV_COLOR) {
+    string name = "AOVC " + get_string(cbp, "aov_name");
+    Pass::add(PASS_AOV_COLOR, scene->film->passes, name.c_str());
+  }
+  else if (shader_type == SHADER_EVAL_AOV_VALUE) {
+    string name = "AOVV " + get_string(cbp, "aov_name");
+    Pass::add(PASS_AOV_VALUE, scene->film->passes, name.c_str());
   }
 
   /* create device and update scene */
@@ -707,11 +736,22 @@ void BlenderSession::bake(BL::Depsgraph &b_depsgraph_,
     BufferParams buffer_params = BlenderSync::get_buffer_params(
         b_render, b_v3d, b_rv3d, scene->camera, width, height);
 
+    int samples = get_int(cbp, "samples");
+    if (samples > 0) {
+      PointerRNA cscene = RNA_pointer_get(&b_scene.ptr, "cycles");
+      if (get_boolean(cscene, "use_square_samples")) {
+        samples *= samples;
+      }
+    }
+    else {
+      samples = session_params.samples;
+    }
+
     scene->bake_manager->set_shader_limit((size_t)b_engine.tile_x(), (size_t)b_engine.tile_y());
 
     /* set number of samples */
-    session->tile_manager.set_samples(session_params.samples);
-    session->reset(buffer_params, session_params.samples);
+    session->tile_manager.set_samples(samples);
+    session->reset(buffer_params, samples);
     session->update_scene();
 
     /* find object index. todo: is arbitrary - copied from mesh_displace.cpp */
@@ -726,6 +766,15 @@ void BlenderSession::bake(BL::Depsgraph &b_depsgraph_,
       }
     }
 
+    size_t num_pixels = b_result.num_pixels();
+
+    b_result.depth(4);
+    b_result.is_color(shader_is_color(shader_type));
+    b_result.is_normal(shader_type == SHADER_EVAL_NORMAL);
+    float fill_other[] = {0.0f, 0.0f, 0.0f, 0.0f}, fill_normal[] = {0.5f, 0.5f, 1.0f, 0.0f};
+    b_result.fill_color((shader_type == SHADER_EVAL_NORMAL) ? fill_normal : fill_other);
+    b_result.identifier(pass_type);
+
     /* Object might have been disabled for rendering or excluded in some
      * other way, in that case Blender will report a warning afterwards. */
     if (object_index != OBJECT_NONE) {
@@ -736,8 +785,8 @@ void BlenderSession::bake(BL::Depsgraph &b_depsgraph_,
     }
 
     /* set number of samples */
-    session->tile_manager.set_samples(session_params.samples);
-    session->reset(buffer_params, session_params.samples);
+    session->tile_manager.set_samples(samples);
+    session->reset(buffer_params, samples);
     session->update_scene();
 
     session->progress.set_update_callback(
@@ -746,6 +795,7 @@ void BlenderSession::bake(BL::Depsgraph &b_depsgraph_,
 
   /* Perform bake. Check cancel to avoid crash with incomplete scene data. */
   if (!session->progress.get_cancel() && bake_data) {
+    float *pixels = (float *)b_result.allocate().ptr.data;
     scene->bake_manager->bake(scene->device,
                               &scene->dscene,
                               scene,
@@ -753,7 +803,7 @@ void BlenderSession::bake(BL::Depsgraph &b_depsgraph_,
                               shader_type,
                               bake_pass_filter,
                               bake_data,
-                              result);
+                              pixels);
   }
 
   /* free all memory used (host and device), so we wouldn't leave render

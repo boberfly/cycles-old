@@ -246,25 +246,28 @@ void BakeManager::device_free(Device * /*device*/, DeviceScene * /*dscene*/)
 
 int BakeManager::aa_samples(Scene *scene, BakeData *bake_data, ShaderEvalType type)
 {
-  if (type == SHADER_EVAL_UV || type == SHADER_EVAL_ROUGHNESS) {
-    return 1;
-  }
-  else if (type == SHADER_EVAL_NORMAL) {
-    /* Only antialias normal if mesh has bump mapping. */
-    Object *object = scene->objects[bake_data->object()];
+  switch (type) {
+    case SHADER_EVAL_UV:
+    case SHADER_EVAL_ROUGHNESS:
+    case SHADER_EVAL_AOV_COLOR:
+    case SHADER_EVAL_AOV_VALUE:
+      return 1;
+    case SHADER_EVAL_NORMAL: {
+      /* Only antialias normal if mesh has bump mapping. */
+      Object *object = scene->objects[bake_data->object()];
 
-    if (object->mesh) {
-      foreach (Shader *shader, object->mesh->used_shaders) {
-        if (shader->has_bump) {
-          return scene->integrator->aa_samples;
+      if (object->mesh) {
+        foreach (Shader *shader, object->mesh->used_shaders) {
+          if (shader->has_bump) {
+            return scene->integrator->aa_samples;
+          }
         }
       }
-    }
 
-    return 1;
-  }
-  else {
-    return scene->integrator->aa_samples;
+      return 1;
+    }
+    default:
+      return scene->integrator->aa_samples;
   }
 }
 

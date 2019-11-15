@@ -59,14 +59,11 @@ class BlenderSession {
   void render(BL::Depsgraph &b_depsgraph);
 
   void bake(BL::Depsgraph &b_depsgrah,
+            BL::BakePass &b_bakepass,
             BL::Object &b_object,
-            const string &pass_type,
-            const int custom_flag,
             const int object_id,
             BL::BakePixel &pixel_array,
-            const size_t num_pixels,
-            const int depth,
-            float pixels[]);
+            BL::BakeResult &b_result);
 
   void write_render_result(BL::RenderLayer &b_rlay, RenderTile &rtile);
   void write_render_tile(RenderTile &rtile);
