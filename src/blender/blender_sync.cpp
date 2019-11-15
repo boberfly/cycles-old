@@ -499,6 +499,12 @@ PassType BlenderSync::get_pass_type(BL::RenderPass &b_pass)
   if (string_startswith(name, cryptomatte_prefix)) {
     return PASS_CRYPTOMATTE;
   }
+  if (string_startswith(name, "AOVV ")) {
+    return PASS_AOV_VALUE;
+  }
+  if (string_startswith(name, "AOVC ")) {
+    return PASS_AOV_COLOR;
+  }
 #undef MAP_PASS
 
   return PASS_NONE;
@@ -661,6 +667,23 @@ vector<Pass> BlenderSync::sync_render_passes(BL::RenderLayer &b_rlay,
       Pass::add(PASS_SAMPLE_COUNT, passes);
     }
   }
+
+  RNA_BEGIN (&crp, b_aov, "aovs") {
+    bool is_color = (get_enum(b_aov, "type") == 1);
+    string name = get_string(b_aov, "name");
+
+    if (is_color) {
+      string passname = string("AOVC ") + name;
+      b_engine.add_pass(passname.c_str(), 4, "RGBA", b_view_layer.name().c_str());
+      Pass::add(PASS_AOV_COLOR, passes, passname.c_str());
+    }
+    else {
+      string passname = string("AOVV ") + name;
+      b_engine.add_pass(passname.c_str(), 1, "X", b_view_layer.name().c_str());
+      Pass::add(PASS_AOV_VALUE, passes, passname.c_str());
+    }
+  }
+  RNA_END;
 
   return passes;
 }

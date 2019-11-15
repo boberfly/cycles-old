@@ -55,7 +55,6 @@ class Shader;
 class ShaderManager;
 class Progress;
 class BakeManager;
-class BakeData;
 class RenderStats;
 
 /* Scene Device Data */

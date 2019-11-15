@@ -233,6 +233,18 @@ bool RenderBuffers::get_denoising_pass_rect(
   return true;
 }
 
+static bool can_have_multiple(PassType type)
+{
+  switch (type) {
+    case PASS_CRYPTOMATTE:
+    case PASS_AOV_COLOR:
+    case PASS_AOV_VALUE:
+      return true;
+    default:
+      return false;
+  }
+}
+
 bool RenderBuffers::get_pass_rect(
     PassType type, float exposure, int sample, int components, float *pixels, const string &name)
 {
@@ -266,8 +278,8 @@ bool RenderBuffers::get_pass_rect(
       continue;
     }
 
-    /* Tell Cryptomatte passes apart by their name. */
-    if (pass.type == PASS_CRYPTOMATTE) {
+    /* Some pass types may appear multiple times, so tell them apart by name. */
+    if (can_have_multiple(pass.type)) {
       if (pass.name != name) {
         pass_offset += pass.components;
         continue;

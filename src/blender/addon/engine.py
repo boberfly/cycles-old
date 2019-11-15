@@ -168,11 +168,11 @@ def render(engine, depsgraph):
         _cycles.render(engine.session, depsgraph.as_pointer())
 
 
-def bake(engine, depsgraph, obj, pass_type, pass_filter, object_id, pixel_array, num_pixels, depth, result):
+def bake(engine, depsgraph, bakepass, obj, object_id, pixel_array, result):
     import _cycles
     session = getattr(engine, "session", None)
     if session is not None:
-        _cycles.bake(engine.session, depsgraph.as_pointer(), obj.as_pointer(), pass_type, pass_filter, object_id, pixel_array.as_pointer(), num_pixels, depth, result.as_pointer())
+        _cycles.bake(engine.session, depsgraph.as_pointer(), bakepass.as_pointer(), obj.as_pointer(), object_id, pixel_array.as_pointer(), result.as_pointer())
 
 
 def reset(engine, data, depsgraph):
@@ -270,6 +270,12 @@ def register_passes(engine, scene, srl):
     if srl.cycles.use_pass_crypto_asset:
         for i in range(0, srl.cycles.pass_crypto_depth, 2):
             engine.register_pass(scene, srl, "CryptoAsset" + '{:02d}'.format(i), 4, "RGBA", 'COLOR')
+
+    for aov in crl.aovs:
+        if aov.type == 'VALUE':
+            engine.register_pass(scene, srl, "AOVV " + aov.name, 1, "X", 'VALUE')
+        else:
+            engine.register_pass(scene, srl, "AOVC " + aov.name, 4, "RGBA", 'COLOR')
 
     if crl.use_denoising or crl.denoising_store_passes:
         engine.register_pass(scene, srl, "Noisy Image", 4, "RGBA", 'COLOR')

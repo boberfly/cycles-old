@@ -19,6 +19,7 @@
 import bpy
 from bpy.props import (
     BoolProperty,
+    CollectionProperty,
     EnumProperty,
     FloatProperty,
     IntProperty,
@@ -191,6 +192,10 @@ enum_view3d_shading_render_pass= (
     ('MIST', "Mist", "Show the Mist render pass", 32),
 )
 
+enum_aov_types = (
+    ('VALUE', "Value", "Write a Value pass", 0),
+    ('COLOR', "Color", "Write a Color pass", 1),
+)
 
 class CyclesRenderSettings(bpy.types.PropertyGroup):
 
@@ -632,26 +637,6 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
         "(this renders somewhat slower, "
         "but time can be saved by manually stopping the render when the noise is low enough)",
         default=False,
-    )
-
-    bake_type: EnumProperty(
-        name="Bake Type",
-        default='COMBINED',
-        description="Type of pass to bake",
-        items=(
-            ('COMBINED', "Combined", ""),
-            ('AO', "Ambient Occlusion", ""),
-            ('SHADOW', "Shadow", ""),
-            ('NORMAL', "Normal", ""),
-            ('UV', "UV", ""),
-            ('ROUGHNESS', "Roughness", ""),
-            ('EMIT', "Emit", ""),
-            ('ENVIRONMENT', "Environment", ""),
-            ('DIFFUSE', "Diffuse", ""),
-            ('GLOSSY', "Glossy", ""),
-            ('TRANSMISSION', "Transmission", ""),
-            ('SUBSURFACE', "Subsurface", ""),
-        ),
     )
 
     use_camera_cull: BoolProperty(
@@ -1241,6 +1226,18 @@ def update_render_passes(self, context):
     view_layer.update_render_passes()
 
 
+class CyclesAOVPass(bpy.types.PropertyGroup):
+    name: StringProperty(
+        name="Name",
+        update=update_render_passes
+    )
+    type: EnumProperty(
+        name="Type",
+        update=update_render_passes,
+        items=enum_aov_types,
+        default='COLOR'
+    )
+
 class CyclesRenderLayerSettings(bpy.types.PropertyGroup):
 
     pass_debug_bvh_traversed_nodes: BoolProperty(
@@ -1405,6 +1402,13 @@ class CyclesRenderLayerSettings(bpy.types.PropertyGroup):
         update=update_render_passes,
         )
 
+    aovs: CollectionProperty(
+        type=CyclesAOVPass
+    )
+    active_aov: IntProperty(
+        default=0
+    )
+
     @classmethod
     def register(cls):
         bpy.types.ViewLayer.cycles = PointerProperty(
@@ -1416,6 +1420,101 @@ class CyclesRenderLayerSettings(bpy.types.PropertyGroup):
     @classmethod
     def unregister(cls):
         del bpy.types.ViewLayer.cycles
+
+
+class CyclesBakePassSettings(bpy.types.PropertyGroup):
+
+    bake_type: EnumProperty(
+        name="Bake Type",
+        default='COMBINED',
+        description="Type of pass to bake",
+        items=(
+            ('COMBINED', "Combined", ""),
+            ('AO', "Ambient Occlusion", ""),
+            ('SHADOW', "Shadow", ""),
+            ('NORMAL', "Normal", ""),
+            ('UV', "UV", ""),
+            ('ROUGHNESS', "Roughness", ""),
+            ('EMIT', "Emit", ""),
+            ('ENVIRONMENT', "Environment", ""),
+            ('DIFFUSE', "Diffuse", ""),
+            ('GLOSSY', "Glossy", ""),
+            ('TRANSMISSION', "Transmission", ""),
+            ('SUBSURFACE', "Subsurface", ""),
+            ('AOV_COLOR', "AOV Color", ""),
+            ('AOV_VALUE', "AOV Value", ""),
+        ),
+    )
+
+    aov_name: StringProperty(
+        name="AOV Name",
+        description="Name of the AOV that will be baked",
+        )
+
+    use_pass_ambient_occlusion: BoolProperty(
+        name="AO",
+        description="Add ambient occlusion contribution",
+        default=True,
+        )
+    use_pass_emit: BoolProperty(
+        name="Emit",
+        description="Add emission contribution",
+        default=True,
+        )
+    use_pass_direct: BoolProperty(
+        name="Direct",
+        description="Add direct lighting contribution",
+        default=True,
+        )
+    use_pass_indirect: BoolProperty(
+        name="Indirect",
+        description="Add indirect lighting contribution",
+        default=True,
+        )
+    use_pass_color: BoolProperty(
+        name="Color",
+        description="Color the pass",
+        default=True,
+        )
+    use_pass_diffuse: BoolProperty(
+        name="Diffuse",
+        description="Add diffuse contribution",
+        default=True,
+        )
+    use_pass_glossy: BoolProperty(
+        name="Glossy",
+        description="Add glossy contribution",
+        default=True,
+        )
+    use_pass_transmission: BoolProperty(
+        name="Transmission",
+        description="Add transmission contribution",
+        default=True,
+        )
+    use_pass_subsurface: BoolProperty(
+        name="Subsurface",
+        description="Add subsurface contribution",
+        default=True,
+        )
+
+    samples: IntProperty(
+        name="Samples",
+        description="Override number of render samples for this bake pass, 0 will use the scene setting",
+        default=0,
+        min=0,
+    )
+
+    @classmethod
+    def register(cls):
+        bpy.types.BakePass.cycles = PointerProperty(
+            name="Cycles Bake Pass Settings",
+            description="Cycles Bake Pass Settings",
+            type=cls,
+        )
+
+    @classmethod
+    def unregister(cls):
+        del bpy.types.BakePass.cycles
 
 
 class CyclesDeviceSettings(bpy.types.PropertyGroup):
@@ -1577,8 +1676,10 @@ def register():
     bpy.utils.register_class(CyclesCurveRenderSettings)
     bpy.utils.register_class(CyclesDeviceSettings)
     bpy.utils.register_class(CyclesPreferences)
+    bpy.utils.register_class(CyclesAOVPass)
     bpy.utils.register_class(CyclesRenderLayerSettings)
     bpy.utils.register_class(CyclesView3DShadingSettings)
+    bpy.utils.register_class(CyclesBakePassSettings)
 
     bpy.types.View3DShading.cycles = bpy.props.PointerProperty(
         name="Cycles Settings",
@@ -1598,5 +1699,7 @@ def unregister():
     bpy.utils.unregister_class(CyclesCurveRenderSettings)
     bpy.utils.unregister_class(CyclesDeviceSettings)
     bpy.utils.unregister_class(CyclesPreferences)
+    bpy.utils.unregister_class(CyclesAOVPass)
     bpy.utils.unregister_class(CyclesRenderLayerSettings)
     bpy.utils.unregister_class(CyclesView3DShadingSettings)
+    bpy.utils.unregister_class(CyclesBakePassSettings)
