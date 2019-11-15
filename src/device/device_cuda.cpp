@@ -1303,6 +1303,15 @@ class CUDADevice : public Device {
         generic_free(mem);
       }
     }
+
+    if(mem.grid_info && mem.grid_type == IMAGE_GRID_TYPE_SPARSE) {
+      device_memory *grid_info = (device_memory*)mem.grid_info;
+      if(grid_info->device_pointer) {
+        stats.mem_free(grid_info->device_size);
+        grid_info->device_pointer = 0;
+        grid_info->device_size = 0;
+      }
+    }
   }
 
 #define CUDA_GET_BLOCKSIZE(func, w, h) \
