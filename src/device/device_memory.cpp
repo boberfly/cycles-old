@@ -64,11 +64,8 @@ device_memory::device_memory(device_memory &&other)
       device_pointer(other.device_pointer),
       host_pointer(other.host_pointer),
       shared_pointer(other.shared_pointer),
-<<<<<<< HEAD
-      shared_counter(other.shared_counter)
-=======
+      shared_counter(other.shared_counter),
       grid_info(other.grid_info)
->>>>>>> vdbGaffer
 {
   other.device_size = 0;
   other.device_pointer = 0;

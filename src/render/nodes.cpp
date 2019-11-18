@@ -205,17 +205,6 @@ void TextureMapping::compile(OSLCompiler &compiler)
 
 /* Image Texture */
 
-ImageSlotTextureNode::~ImageSlotTextureNode()
-{
-  if (image_manager) {
-    foreach (int slot, slots) {
-      if (slot != -1) {
-        image_manager->remove_image(slot);
-      }
-    }
-  }
-}
-
 void ImageSlotTextureNode::add_image_user() const
 {
   /* Increase image user count for new node. */
@@ -285,14 +274,12 @@ ImageTextureNode::ImageTextureNode() : ImageSlotTextureNode(node_type)
 
 ImageTextureNode::~ImageTextureNode()
 {
-  if(image_manager) {
-    image_manager->remove_image(filename.string(),
-                                string(),
-                                builtin_data,
-                                interpolation,
-                                extension,
-                                alpha_type,
-                                colorspace);
+  if (image_manager) {
+    foreach (int slot, slots) {
+      if (slot != -1) {
+        image_manager->remove_image(slot);
+      }
+    }
   }
 }
 
@@ -501,7 +488,7 @@ void ImageTextureNode::compile(OSLCompiler &compiler)
   if (slots.size() == 0) {
     ImageMetaData metadata;
     if (builtin_data == NULL) {
-      image_manager->get_image_metadata(filename.string(), NULL, colorspace, metadata);
+      image_manager->get_image_metadata(filename.string(), string(), NULL, colorspace, metadata);
       slots.push_back(-1);
     }
     else {
@@ -600,8 +587,13 @@ EnvironmentTextureNode::EnvironmentTextureNode() : ImageSlotTextureNode(node_typ
 EnvironmentTextureNode::~EnvironmentTextureNode()
 {
   if (image_manager) {
-    image_manager->remove_image(
-        filename.string(), string(), builtin_data, interpolation, EXTENSION_REPEAT, alpha_type, colorspace);
+    image_manager->remove_image(filename.string(),
+                                string(),
+                                builtin_data,
+                                interpolation,
+                                EXTENSION_REPEAT,
+                                alpha_type,
+                                colorspace);
   }
 }
 
@@ -694,7 +686,7 @@ void EnvironmentTextureNode::compile(OSLCompiler &compiler)
   if (slots.empty()) {
     ImageMetaData metadata;
     if (builtin_data == NULL) {
-      image_manager->get_image_metadata(filename.string(), NULL, colorspace, metadata);
+      image_manager->get_image_metadata(filename.string(), string(), NULL, colorspace, metadata);
       slots.push_back(-1);
     }
     else {

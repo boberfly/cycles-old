@@ -79,7 +79,7 @@ class ImageSlotTextureNode : public TextureNode {
     special_type = SHADER_SPECIAL_TYPE_IMAGE_SLOT;
     image_manager = NULL;
   }
-  ~ImageSlotTextureNode();
+  //~ImageSlotTextureNode();
   void add_image_user() const;
   ImageManager *image_manager;
   vector<int> slots;
@@ -88,6 +88,7 @@ class ImageSlotTextureNode : public TextureNode {
 class ImageTextureNode : public ImageSlotTextureNode {
  public:
   SHADER_NODE_NO_CLONE_CLASS(ImageTextureNode)
+  ~ImageTextureNode();
   ShaderNode *clone() const;
   void attributes(Shader *shader, AttributeRequestSet *attributes);
   bool has_attribute_dependency()
@@ -125,6 +126,7 @@ class ImageTextureNode : public ImageSlotTextureNode {
 class EnvironmentTextureNode : public ImageSlotTextureNode {
  public:
   SHADER_NODE_NO_CLONE_CLASS(EnvironmentTextureNode)
+  ~EnvironmentTextureNode();
   ShaderNode *clone() const;
   void attributes(Shader *shader, AttributeRequestSet *attributes);
   bool has_attribute_dependency()
