@@ -129,6 +129,7 @@ set(SRC_HEADERS
   kernel_types.h
   kernel_volume.h
   kernel_work_stealing.h
+  kernel_write_passes.h
 )
 
 set(SRC_KERNELS_CPU_HEADERS
