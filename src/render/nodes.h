@@ -114,6 +114,7 @@ class ImageTextureNode : public ImageSlotTextureNode {
   bool animated;
   float3 vector;
   ccl::vector<int> tiles;
+  float3 vector_dx, vector_dy;
 
   /* Runtime. */
   bool is_float;
@@ -154,6 +155,7 @@ class EnvironmentTextureNode : public ImageSlotTextureNode {
   InterpolationType interpolation;
   bool animated;
   float3 vector;
+  float3 vector_dx, vector_dy;
 
   /* Runtime. */
   bool is_float;
