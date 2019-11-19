@@ -44,11 +44,7 @@ CCL_NAMESPACE_BEGIN
 
 #ifdef WITH_OSL
 
-/* Shared Texture and Shading System */
-
-OSL::TextureSystem *OSLShaderManager::ts_shared = NULL;
-int OSLShaderManager::ts_shared_users = 0;
-thread_mutex OSLShaderManager::ts_shared_mutex;
+/* Shared Shading System */
 
 OSL::ShadingSystem *OSLShaderManager::ss_shared = NULL;
 OSLRenderServices *OSLShaderManager::services_shared = NULL;
@@ -141,7 +137,7 @@ void OSLShaderManager::device_update(Device *device,
   need_update = false;
 
   /* set texture system */
-  scene->image_manager->set_osl_texture_system((void *)ts);
+  scene->image_manager->set_oiio_texture_system((void *)ts);
 
   /* add special builtin texture types */
   services->textures.insert(ustring("@ao"), new OSLTextureHandle(OSLTextureHandle::AO));
@@ -184,41 +180,6 @@ void OSLShaderManager::device_free(Device *device, DeviceScene *dscene, Scene *s
   og->background_state.reset();
 }
 
-void OSLShaderManager::texture_system_init()
-{
-  /* create texture system, shared between different renders to reduce memory usage */
-  thread_scoped_lock lock(ts_shared_mutex);
-
-  if (ts_shared_users == 0) {
-    ts_shared = TextureSystem::create(true);
-
-    ts_shared->attribute("automip", 1);
-    ts_shared->attribute("autotile", 64);
-    ts_shared->attribute("gray_to_rgb", 1);
-
-    /* effectively unlimited for now, until we support proper mipmap lookups */
-    ts_shared->attribute("max_memory_MB", 16384);
-  }
-
-  ts = ts_shared;
-  ts_shared_users++;
-}
-
-void OSLShaderManager::texture_system_free()
-{
-  /* shared texture system decrease users and destroy if no longer used */
-  thread_scoped_lock lock(ts_shared_mutex);
-  ts_shared_users--;
-
-  if (ts_shared_users == 0) {
-    ts_shared->invalidate_all(true);
-    OSL::TextureSystem::destroy(ts_shared);
-    ts_shared = NULL;
-  }
-
-  ts = NULL;
-}
-
 void OSLShaderManager::shading_system_init()
 {
   /* create shading system, shared between different renders to reduce memory usage */
@@ -226,7 +187,7 @@ void OSLShaderManager::shading_system_init()
 
   if (ss_shared_users == 0) {
     /* Must use aligned new due to concurrent hash map. */
-    services_shared = util_aligned_new<OSLRenderServices>(ts_shared);
+    services_shared = util_aligned_new<OSLRenderServices>(ts);
 
     string shader_path = path_get("shader");
 #  ifdef _WIN32
@@ -241,7 +202,7 @@ void OSLShaderManager::shading_system_init()
     shader_path = string_to_ansi(shader_path);
 #  endif
 
-    ss_shared = new OSL::ShadingSystem(services_shared, ts_shared, &errhandler);
+    ss_shared = new OSL::ShadingSystem(services_shared, ts, &errhandler);
     ss_shared->attribute("lockgeom", 1);
     ss_shared->attribute("commonspace", "world");
     ss_shared->attribute("searchpath:shader", shader_path);
