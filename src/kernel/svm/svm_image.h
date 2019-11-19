@@ -72,7 +72,7 @@ ccl_device void svm_node_tex_image(
   }
 
   int id = -1;
-  uint num_nodes = node.y;
+  int num_nodes = (int)node.y;
   if (num_nodes > 0) {
     /* Remember the offset of the node following the tile nodes. */
     int next_offset = (*offset) + num_nodes;
@@ -87,13 +87,13 @@ ccl_device void svm_node_tex_image(
 
       /* Find the index of the tile. */
       for (int i = 0; i < num_nodes; i++) {
-        uint4 node = read_node(kg, offset);
-        if (node.x == tile) {
-          id = node.y;
+        uint4 tile_node = read_node(kg, offset);
+        if (tile_node.x == tile) {
+          id = tile_node.y;
           break;
         }
-        if (node.z == tile) {
-          id = node.w;
+        if (tile_node.z == tile) {
+          id = tile_node.w;
           break;
         }
       }
