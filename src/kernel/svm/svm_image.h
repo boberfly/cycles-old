@@ -92,7 +92,6 @@ ccl_device float4 svm_image_texture(KernelGlobals *kg,
   else
 #endif
     r = kernel_tex_image_interp(kg, id, x, y);
->>>>>>> cycles_texture_cache
   const float alpha = r.w;
 
   if ((flags & NODE_IMAGE_ALPHA_UNASSOCIATE) && alpha != 1.0f && alpha != 0.0f) {
@@ -120,8 +119,6 @@ ccl_device_inline float3 texco_remap_square(float3 co)
 ccl_device void svm_node_tex_image(
     KernelGlobals *kg, ShaderData *sd, int path_flag, float *stack, uint4 node, int *offset)
 {
-  uint id = node.y;
-
   uint co_offset, out_offset, alpha_offset, flags;
   uint projection, dx_offset, dy_offset, unused;
 
