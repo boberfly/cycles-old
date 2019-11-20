@@ -239,6 +239,7 @@ static bool can_have_multiple(PassType type)
     case PASS_CRYPTOMATTE:
     case PASS_AOV_COLOR:
     case PASS_AOV_VALUE:
+    case PASS_LIGHTGROUP:
       return true;
     default:
       return false;

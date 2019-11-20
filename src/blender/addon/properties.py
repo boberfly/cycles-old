@@ -25,6 +25,7 @@ from bpy.props import (
     IntProperty,
     PointerProperty,
     StringProperty,
+    CollectionProperty,
 )
 
 from math import pi
@@ -1307,6 +1308,13 @@ class CyclesAOVPass(bpy.types.PropertyGroup):
         default='COLOR'
     )
 
+
+class CyclesLightGroup(bpy.types.PropertyGroup):
+    name: StringProperty(name="Name", default="Lightgroup")
+    collection: PointerProperty(name="Collection", type=bpy.types.Collection)
+    include_world: BoolProperty(name="Include World", default=False)
+
+
 class CyclesRenderLayerSettings(bpy.types.PropertyGroup):
 
     pass_debug_bvh_traversed_nodes: BoolProperty(
@@ -1477,6 +1485,15 @@ class CyclesRenderLayerSettings(bpy.types.PropertyGroup):
     active_aov: IntProperty(
         default=0
     )
+
+    lightgroups: CollectionProperty(
+        name="Light Groups",
+        type=CyclesLightGroup,
+        )
+    active_lightgroup: IntProperty(
+        name="Active Light Group",
+        default=0,
+        )
 
     @classmethod
     def register(cls):
@@ -1746,6 +1763,7 @@ def register():
     bpy.utils.register_class(CyclesDeviceSettings)
     bpy.utils.register_class(CyclesPreferences)
     bpy.utils.register_class(CyclesAOVPass)
+    bpy.utils.register_class(CyclesLightGroup)
     bpy.utils.register_class(CyclesRenderLayerSettings)
     bpy.utils.register_class(CyclesView3DShadingSettings)
     bpy.utils.register_class(CyclesBakePassSettings)
@@ -1769,6 +1787,7 @@ def unregister():
     bpy.utils.unregister_class(CyclesDeviceSettings)
     bpy.utils.unregister_class(CyclesPreferences)
     bpy.utils.unregister_class(CyclesAOVPass)
+    bpy.utils.unregister_class(CyclesLightGroup)
     bpy.utils.unregister_class(CyclesRenderLayerSettings)
     bpy.utils.unregister_class(CyclesView3DShadingSettings)
     bpy.utils.unregister_class(CyclesBakePassSettings)
