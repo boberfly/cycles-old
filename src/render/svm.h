@@ -96,11 +96,8 @@ class SVMCompiler {
     string full_report() const;
   };
 
-  SVMCompiler(ShaderManager *shader_manager,
-              ImageManager *image_manager,
-              LightManager *light_manager);
-  void compile(
-      Scene *scene, Shader *shader, array<int4> &svm_nodes, int index, Summary *summary = NULL);
+  SVMCompiler(Scene *scene);
+  void compile(Shader *shader, array<int4> &svm_nodes, int index, Summary *summary = NULL);
 
   int stack_assign(ShaderOutput *output);
   int stack_assign(ShaderInput *input);
@@ -129,9 +126,8 @@ class SVMCompiler {
     return current_type;
   }
 
-  ImageManager *image_manager;
-  ShaderManager *shader_manager;
-  LightManager *light_manager;
+  Scene *scene;
+  ShaderGraph *current_graph;
   bool background;
 
  protected:
@@ -224,7 +220,6 @@ class SVMCompiler {
   array<int4> current_svm_nodes;
   ShaderType current_type;
   Shader *current_shader;
-  ShaderGraph *current_graph;
   Stack active_stack;
   int max_stack_use;
   uint mix_weight_offset;
