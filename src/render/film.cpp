@@ -38,6 +38,18 @@ static bool compare_pass_order(const Pass &a, const Pass &b)
   return (a.components > b.components);
 }
 
+static bool compare_lightgroup_order(const Pass &a, const Pass &b)
+{
+  if ((a.type == PASS_LIGHTGROUP) && (b.type == PASS_LIGHTGROUP)) {
+    string str = a.name;
+    int numA = stoi(str.replace(str.begin(),str.end()-2,""));
+    str = b.name;
+    int numB = stoi(str.replace(str.begin(),str.end()-2,""));
+    return (numA < numB );
+  }
+  return (a.type < b.type);
+}
+
 void Pass::add(PassType type, vector<Pass> &passes, const char *name)
 {
   for (size_t i = 0; i < passes.size(); i++) {
@@ -188,6 +200,15 @@ void Pass::add(PassType type, vector<Pass> &passes, const char *name)
   /* order from by components, to ensure alignment so passes with size 4
    * come first and then passes with size 1 */
   sort(&passes[0], &passes[0] + passes.size(), compare_pass_order);
+  /* ensure lightgroups are in-order so that they match lightgroup masks */
+  for (size_t i = 0; i < passes.size(); i++)
+  {
+    if (passes[i].type == PASS_LIGHTGROUP)
+    {
+      sort(&passes[i], &passes[0] + passes.size(), compare_lightgroup_order);
+      break;
+    }
+  }
 
   if (pass.divide_type != PASS_NONE)
     Pass::add(pass.divide_type, passes);

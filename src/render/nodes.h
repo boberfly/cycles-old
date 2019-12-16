@@ -198,7 +198,7 @@ class OutputNode : public ShaderNode {
 class OutputAOVNode : public ShaderNode {
  public:
   SHADER_NODE_CLASS(OutputAOVNode)
-  virtual void simplify_settings(Scene *scene);
+  void simplify_settings(Scene *scene, Shader *shader);
 
   float value;
   float3 color;

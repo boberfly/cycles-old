@@ -5848,7 +5848,7 @@ OutputAOVNode::OutputAOVNode() : ShaderNode(node_type)
   slot = -1;
 }
 
-void OutputAOVNode::simplify_settings(Scene *scene)
+void OutputAOVNode::simplify_settings(Scene *scene, Shader * /*shader*/)
 {
   slot = scene->film->get_aov_offset("AOVV " + name.string(), is_color);
   if (slot == -1) {
