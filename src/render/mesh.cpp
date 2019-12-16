@@ -453,6 +453,7 @@ Mesh::Mesh() : Node(node_type)
   subd_params = NULL;
 
   patch_table = NULL;
+  use_volume_motion_blur = false;
 }
 
 Mesh::~Mesh()
@@ -1627,6 +1628,12 @@ void MeshManager::device_update_attributes(Device *device,
 
     foreach (Shader *shader, mesh->used_shaders) {
       mesh_attributes[i].add(shader->attributes);
+    }
+
+    /* motion blur for volumes */
+    if(mesh->use_volume_motion_blur)
+    {
+      mesh_attributes[i].add(ATTR_STD_VOLUME_VELOCITY);
     }
   }
 

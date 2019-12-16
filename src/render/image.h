@@ -78,6 +78,7 @@ class ImageManager {
   ~ImageManager();
 
   int add_image(const string &filename,
+                const string &grid_name,
                 void *builtin_data,
                 bool animated,
                 float frame,
@@ -85,22 +86,27 @@ class ImageManager {
                 ExtensionType extension,
                 ImageAlphaType alpha_type,
                 ustring colorspace,
+                bool is_volume,
+                float isovalue,
                 ImageMetaData &metadata);
   void add_image_user(int flat_slot);
   void remove_image(int flat_slot);
   void remove_image(const string &filename,
+                    const string &grid_name,
                     void *builtin_data,
                     InterpolationType interpolation,
                     ExtensionType extension,
                     ImageAlphaType alpha_type,
                     ustring colorspace);
   void tag_reload_image(const string &filename,
+                        const string &grid_name,
                         void *builtin_data,
                         InterpolationType interpolation,
                         ExtensionType extension,
                         ImageAlphaType alpha_type,
                         ustring colorspace);
   bool get_image_metadata(const string &filename,
+                          const string &grid_name,
                           void *builtin_data,
                           ustring colorspace,
                           ImageMetaData &metadata);
@@ -149,6 +155,8 @@ class ImageManager {
 
   struct Image {
     string filename;
+    /* For OpenVDB files. Each grid in a .vdb is treated as a separate image. */
+    string grid_name;
     void *builtin_data;
     ImageMetaData metadata;
 
@@ -156,6 +164,8 @@ class ImageManager {
     ImageAlphaType alpha_type;
     bool need_load;
     bool animated;
+    bool is_volume;
+    bool isovalue;
     float frame;
     InterpolationType interpolation;
     ExtensionType extension;
@@ -185,11 +195,27 @@ class ImageManager {
 
   bool file_load_image_generic(Image *img, unique_ptr<ImageInput> *in);
 
+  bool allocate_grid_info(Device *device,
+                          device_memory *tex_img,
+                          vector<int> *sparse_index);
+
+  template<typename DeviceType>
+  void file_load_failed(Image *img,
+                        ImageDataType type,
+                        device_vector<DeviceType> *tex_img);
+
+#ifdef WITH_OPENVDB
+  template<typename DeviceType>
+  void file_load_extern_vdb(Device *device,
+                            Image *img,
+                            ImageDataType type);
+#endif
+
   template<TypeDesc::BASETYPE FileFormat, typename StorageType, typename DeviceType>
-  bool file_load_image(Image *img,
+  bool file_load_image(Device *device,
+                       Image *img,
                        ImageDataType type,
-                       int texture_limit,
-                       device_vector<DeviceType> &tex_img);
+                       int texture_limit);
 
   void metadata_detect_colorspace(ImageMetaData &metadata, const char *file_format);
 

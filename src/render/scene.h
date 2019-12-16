@@ -217,6 +217,8 @@ class SceneParams {
 
   bool background;
 
+  bool intialized_openvdb;
+
   SceneParams()
   {
     shadingsystem = SHADINGSYSTEM_SVM;
@@ -228,6 +230,7 @@ class SceneParams {
     persistent_data = false;
     texture_limit = 0;
     background = true;
+    intialized_openvdb = false;
   }
 
   bool modified(const SceneParams &params)
