@@ -608,17 +608,6 @@ EnvironmentTextureNode::EnvironmentTextureNode() : ImageSlotTextureNode(node_typ
   animated = false;
 }
 
-<<<<<<< HEAD
-=======
-EnvironmentTextureNode::~EnvironmentTextureNode()
-{
-  if (image_manager) {
-    image_manager->remove_image(
-        filename.string(), string(), builtin_data, interpolation, EXTENSION_REPEAT, alpha_type, colorspace);
-  }
-}
-
->>>>>>> vdbGaffer
 ShaderNode *EnvironmentTextureNode::clone() const
 {
   add_image_user();

@@ -241,7 +241,7 @@ bool RenderBuffers::get_pass_rect(
   }
 
   float *sample_count = NULL;
-  if (type == PassType::PASS_COMBINED) {
+  if (name == "Combined") {
     int sample_offset = 0;
     for (size_t j = 0; j < params.passes.size(); j++) {
       Pass &pass = params.passes[j];
