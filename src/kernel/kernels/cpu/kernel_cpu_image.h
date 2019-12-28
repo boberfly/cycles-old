@@ -89,30 +89,29 @@ template<typename T> struct TextureInterpolator {
   }
 
   /* Sparse grid voxel access. */
-  static ccl_always_inline float4 read_data(const T *data,
-                                            const SparseTextureInfo s_info,
-                                            const int *offsets,
-                                            int x, int y, int z)
+  static ccl_always_inline float4
+  read_data(const T *data, const SparseTextureInfo s_info, const int *offsets, int x, int y, int z)
   {
-    int tile_start = offsets[(x >> TILE_INDEX_SHIFT)
-                     + s_info.tiled_w
-                     * ((y >> TILE_INDEX_SHIFT)
-                       + (z >> TILE_INDEX_SHIFT)
-                       * s_info.tiled_h)];
-    if(tile_start < 0) {
-      return make_float4(0.0f);
+    int tile_start = offsets[(x >> TILE_INDEX_SHIFT) +
+                             s_info.tiled_w * ((y >> TILE_INDEX_SHIFT) +
+                                               (z >> TILE_INDEX_SHIFT) * s_info.tiled_h)];
+    if (tile_start < 0) {
+      return make_float4(0.0f, 0.0f, 0.0f, 0.0f);
     }
-    return read(data[tile_start + (x & TILE_INDEX_MASK)
-            + ((x > s_info.div_w) ? s_info.remain_w : TILE_SIZE)
-            * ((y & TILE_INDEX_MASK) + (z & TILE_INDEX_MASK)
-               * ((y > s_info.div_h) ? s_info.remain_h : TILE_SIZE))]);
-    }
+    return read(
+        data[tile_start + (x & TILE_INDEX_MASK) +
+             ((x > s_info.div_w) ? s_info.remain_w : TILE_SIZE) *
+                 ((y & TILE_INDEX_MASK) +
+                  (z & TILE_INDEX_MASK) * ((y > s_info.div_h) ? s_info.remain_h : TILE_SIZE))]);
+  }
 
   static ccl_always_inline float4 read_data(const T *data,
                                             const SparseTextureInfo s_info,
                                             const int *offsets,
                                             int index,
-                                            int width, int height, int /*depth*/)
+                                            int width,
+                                            int height,
+                                            int /*depth*/)
   {
     int x = index % width;
     int y = (index / width) % height;
@@ -323,11 +322,11 @@ template<typename T> struct TextureInterpolator {
     const T *data = (const T *)info.data;
     const SparseTextureInfo s_info = info.sparse_info;
 
-    if(UNLIKELY(s_info.offsets)) {
-      const int *offsets = (const int*)s_info.offsets;
+    if (UNLIKELY(s_info.offsets)) {
+      const int *offsets = (const int *)s_info.offsets;
       return read_data(data, s_info, offsets, ix, iy, iz);
     }
-    return read(data[ix + iy * width + iz * width * height]);
+    return read(data[ix + width * (iy + iz * height)]);
   }
 
   static ccl_always_inline float4 interp_3d_linear(const TextureInfo &info,
@@ -374,32 +373,30 @@ template<typename T> struct TextureInterpolator {
         return make_float4(0.0f, 0.0f, 0.0f, 0.0f);
     }
 
-    const T *data = (const T *)info.data;
-	const SparseTextureInfo s_info = info.sparse_info;
     float4 r;
+    const T *data = (const T *)info.data;
+    const SparseTextureInfo s_info = info.sparse_info;
 
-    if(UNLIKELY(s_info.offsets)) {
-      const int *offsets = (const int*)s_info.offsets;
-      r  = (1.0f - tz)*(1.0f - ty)*(1.0f - tx) * read_data(data, s_info, offsets, ix,  iy,  iz);
-      r += (1.0f - tz)*(1.0f - ty)*tx          * read_data(data, s_info, offsets, nix, iy,  iz);
-      r += (1.0f - tz)*ty*(1.0f - tx)          * read_data(data, s_info, offsets, ix,  niy, iz);
-      r += (1.0f - tz)*ty*tx                   * read_data(data, s_info, offsets, nix, niy, iz);
-      r += tz*(1.0f - ty)*(1.0f - tx)          * read_data(data, s_info, offsets, ix,  iy,  niz);
-      r += tz*(1.0f - ty)*tx                   * read_data(data, s_info, offsets, nix, iy,  niz);
-      r += tz*ty*(1.0f - tx)                   * read_data(data, s_info, offsets, ix,  niy, niz);
-      r += tz*ty*tx                            * read_data(data, s_info, offsets, nix, niy, niz);
+    if (UNLIKELY(s_info.offsets)) {
+      const int *offsets = (const int *)s_info.offsets;
+      r = (1.0f - tz) * (1.0f - ty) * (1.0f - tx) * read_data(data, s_info, offsets, ix, iy, iz);
+      r += (1.0f - tz) * (1.0f - ty) * tx * read_data(data, s_info, offsets, nix, iy, iz);
+      r += (1.0f - tz) * ty * (1.0f - tx) * read_data(data, s_info, offsets, ix, niy, iz);
+      r += (1.0f - tz) * ty * tx * read_data(data, s_info, offsets, nix, niy, iz);
+      r += tz * (1.0f - ty) * (1.0f - tx) * read_data(data, s_info, offsets, ix, iy, niz);
+      r += tz * (1.0f - ty) * tx * read_data(data, s_info, offsets, nix, iy, niz);
+      r += tz * ty * (1.0f - tx) * read_data(data, s_info, offsets, ix, niy, niz);
+      r += tz * ty * tx * read_data(data, s_info, offsets, nix, niy, niz);
     }
     else {
-      r = (1.0f - tz) * (1.0f - ty) * (1.0f - tx) *
-          read(data[ix + iy * width + iz * width * height]);
-      r += (1.0f - tz) * (1.0f - ty) * tx * read(data[nix + iy * width + iz * width * height]);
-      r += (1.0f - tz) * ty * (1.0f - tx) * read(data[ix + niy * width + iz * width * height]);
-      r += (1.0f - tz) * ty * tx * read(data[nix + niy * width + iz * width * height]);
-
-      r += tz * (1.0f - ty) * (1.0f - tx) * read(data[ix + iy * width + niz * width * height]);
-      r += tz * (1.0f - ty) * tx * read(data[nix + iy * width + niz * width * height]);
-      r += tz * ty * (1.0f - tx) * read(data[ix + niy * width + niz * width * height]);
-      r += tz * ty * tx * read(data[nix + niy * width + niz * width * height]);
+      r = (1.0f - tz) * (1.0f - ty) * (1.0f - tx) * read(data[ix + width * (iy + iz * height)]);
+      r += (1.0f - tz) * (1.0f - ty) * tx * read(data[nix + width * (iy + iz * height)]);
+      r += (1.0f - tz) * ty * (1.0f - tx) * read(data[ix + width * (niy + iz * height)]);
+      r += (1.0f - tz) * ty * tx * read(data[nix + width * (niy + iz * height)]);
+      r += tz * (1.0f - ty) * (1.0f - tx) * read(data[ix + width * (iy + niz * height)]);
+      r += tz * (1.0f - ty) * tx * read(data[nix + width * (iy + niz * height)]);
+      r += tz * ty * (1.0f - tx) * read(data[ix + width * (niy + niz * height)]);
+      r += tz * ty * tx * read(data[nix + width * (niy + niz * height)]);
     }
 
     return r;
@@ -484,9 +481,10 @@ template<typename T> struct TextureInterpolator {
     /* Some helper macro to keep code reasonable size,
      * let compiler to inline all the matrix multiplications.
      */
-#define DATA(x, y, z) (UNLIKELY(s_info.offsets) ? \
-        read_data(data, s_info, offsets, xc[x] + yc[y] + zc[z], width, height, depth) : \
-        read(data[xc[x] + yc[y] + zc[z]]))
+#define DATA(x, y, z) \
+  (UNLIKELY(s_info.offsets) ? \
+       read_data(data, s_info, offsets, xc[x] + yc[y] + zc[z], width, height, depth) : \
+       read(data[xc[x] + yc[y] + zc[z]]))
 #define COL_TERM(col, row) \
   (v[col] * (u[0] * DATA(0, col, row) + u[1] * DATA(1, col, row) + u[2] * DATA(2, col, row) + \
              u[3] * DATA(3, col, row)))
@@ -500,7 +498,7 @@ template<typename T> struct TextureInterpolator {
     /* Actual interpolation. */
     const T *data = (const T *)info.data;
     const SparseTextureInfo s_info = info.sparse_info;
-    const int *offsets = (const int*)s_info.offsets;
+    const int *offsets = (const int *)s_info.offsets;
     return ROW_TERM(0) + ROW_TERM(1) + ROW_TERM(2) + ROW_TERM(3);
 
 #undef COL_TERM
@@ -515,12 +513,12 @@ template<typename T> struct TextureInterpolator {
       return make_float4(0.0f, 0.0f, 0.0f, 0.0f);
 
     switch ((interp == INTERPOLATION_NONE) ? info.interpolation : interp) {
-      case INTERPOLATION_CLOSEST:
-        return interp_3d_closest(info, x, y, z);
+      case INTERPOLATION_CUBIC:
+        return interp_3d_tricubic(info, x, y, z);
       case INTERPOLATION_LINEAR:
         return interp_3d_linear(info, x, y, z);
       default:
-        return interp_3d_tricubic(info, x, y, z);
+        return interp_3d_closest(info, x, y, z);
     }
   }
 #undef SET_CUBIC_SPLINE_WEIGHTS

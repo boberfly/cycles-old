@@ -268,32 +268,32 @@ void VolumeMeshBuilder::generate_vertices_and_quads(vector<ccl::int3> &vertices_
          */
 
         voxel_index = compute_index(x - 1, y, z, res);
-        if(voxel_index == -1 || grid[voxel_index] == 0) {
+        if (voxel_index == -1 || grid[voxel_index] == 0) {
           create_quad(corners, vertices_is, quads, res, used_verts, QUAD_X_MIN);
         }
 
         voxel_index = compute_index(x + 1, y, z, res);
-        if(voxel_index == -1 || grid[voxel_index] == 0) {
+        if (voxel_index == -1 || grid[voxel_index] == 0) {
           create_quad(corners, vertices_is, quads, res, used_verts, QUAD_X_MAX);
         }
 
         voxel_index = compute_index(x, y - 1, z, res);
-        if(voxel_index == -1 || grid[voxel_index] == 0) {
+        if (voxel_index == -1 || grid[voxel_index] == 0) {
           create_quad(corners, vertices_is, quads, res, used_verts, QUAD_Y_MIN);
         }
 
         voxel_index = compute_index(x, y + 1, z, res);
-        if(voxel_index == -1 || grid[voxel_index] == 0) {
+        if (voxel_index == -1 || grid[voxel_index] == 0) {
           create_quad(corners, vertices_is, quads, res, used_verts, QUAD_Y_MAX);
         }
 
         voxel_index = compute_index(x, y, z - 1, res);
-        if(voxel_index == -1 || grid[voxel_index] == 0) {
+        if (voxel_index == -1 || grid[voxel_index] == 0) {
           create_quad(corners, vertices_is, quads, res, used_verts, QUAD_Z_MIN);
         }
 
         voxel_index = compute_index(x, y, z + 1, res);
-        if(voxel_index == -1 || grid[voxel_index] == 0) {
+        if (voxel_index == -1 || grid[voxel_index] == 0) {
           create_quad(corners, vertices_is, quads, res, used_verts, QUAD_Z_MAX);
         }
       }
@@ -371,6 +371,7 @@ void MeshManager::create_volume_mesh(Scene *scene, Mesh *mesh, Progress &progres
         image_memory->dense_width, image_memory->dense_height, image_memory->dense_depth);
 
     if (volume_params.resolution == make_int3(0, 0, 0)) {
+      /* First volume grid. */
       volume_params.resolution = resolution;
       grid_mem = image_memory->memory_size();
     }
@@ -381,16 +382,15 @@ void MeshManager::create_volume_mesh(Scene *scene, Mesh *mesh, Progress &progres
 
     VoxelAttributeGrid voxel_grid;
 
-    voxel_grid.data = static_cast<float*>(image_memory->host_pointer);
+    voxel_grid.data = static_cast<float *>(image_memory->host_pointer);
     voxel_grid.channels = image_memory->data_elements;
     voxel_grid.data_width = image_memory->data_width;
     voxel_grid.grid_type = image_memory->grid_type;
 
-    if(image_memory->grid_type == IMAGE_GRID_TYPE_SPARSE ||
-       image_memory->grid_type == IMAGE_GRID_TYPE_SPARSE_PAD)
-    {
-      device_memory *sparse_mem = (device_memory*)image_memory->grid_info;
-      voxel_grid.offsets = static_cast<int*>(sparse_mem->host_pointer);
+    if (image_memory->grid_type == IMAGE_GRID_TYPE_SPARSE ||
+        image_memory->grid_type == IMAGE_GRID_TYPE_SPARSE_PAD) {
+      device_memory *sparse_mem = (device_memory *)image_memory->grid_info;
+      voxel_grid.offsets = static_cast<int *>(sparse_mem->host_pointer);
     }
     else {
       voxel_grid.offsets = NULL;
@@ -399,7 +399,7 @@ void MeshManager::create_volume_mesh(Scene *scene, Mesh *mesh, Progress &progres
     voxel_grids.push_back(voxel_grid);
   }
 
-  if(voxel_grids.empty()) {
+  if (voxel_grids.empty()) {
     return;
   }
 
@@ -449,23 +449,26 @@ void MeshManager::create_volume_mesh(Scene *scene, Mesh *mesh, Progress &progres
   VolumeMeshBuilder builder(&volume_params);
   const float isovalue = mesh->volume_isovalue;
 
-  for(size_t i = 0; i < voxel_grids.size(); ++i) {
+  for (size_t i = 0; i < voxel_grids.size(); ++i) {
     const VoxelAttributeGrid &voxel_grid = voxel_grids[i];
 
-    for(int z = 0; z < resolution.z; ++z) {
-      for(int y = 0; y < resolution.y; ++y) {
-        for(int x = 0; x < resolution.x; ++x) {
+    for (int z = 0; z < resolution.z; ++z) {
+      for (int y = 0; y < resolution.y; ++y) {
+        for (int x = 0; x < resolution.x; ++x) {
           int voxel_index = -1;
-          switch(voxel_grid.grid_type) {
+          switch (voxel_grid.grid_type) {
             case IMAGE_GRID_TYPE_SPARSE:
-              voxel_index = compute_index(voxel_grid.offsets,
-                                          x, y, z, resolution.x,
-                                          resolution.y, resolution.z);
+              voxel_index = compute_index(
+                  voxel_grid.offsets, x, y, z, resolution.x, resolution.y, resolution.z);
               break;
             case IMAGE_GRID_TYPE_SPARSE_PAD:
               voxel_index = compute_index_pad(voxel_grid.offsets,
-                                              x, y, z, resolution.x,
-                                              resolution.y, resolution.z,
+                                              x,
+                                              y,
+                                              z,
+                                              resolution.x,
+                                              resolution.y,
+                                              resolution.z,
                                               voxel_grid.data_width);
               break;
             case IMAGE_GRID_TYPE_OPENVDB:
@@ -475,9 +478,9 @@ void MeshManager::create_volume_mesh(Scene *scene, Mesh *mesh, Progress &progres
           }
           voxel_index *= voxel_grid.channels;
 
-          if(voxel_index >= 0) {
-            for(int c = 0; c < voxel_grid.channels; c++) {
-              if(voxel_grid.data[voxel_index + c] >= isovalue) {
+          if (voxel_index >= 0) {
+            for (int c = 0; c < voxel_grid.channels; c++) {
+              if (voxel_grid.data[voxel_index + c] >= isovalue) {
                 builder.add_node_with_padding(x, y, z);
                 break;
               }
@@ -520,9 +523,7 @@ void MeshManager::create_volume_mesh(Scene *scene, Mesh *mesh, Progress &progres
                  (1024.0 * 1024.0)
           << "Mb.";
 
-  VLOG(1) << "Memory usage volume grid: "
-          << grid_mem / (1024.0 * 1024.0)
-          << "Mb.";
+  VLOG(1) << "Memory usage volume grid: " << grid_mem / (1024.0 * 1024.0) << "Mb.";
 }
 
 CCL_NAMESPACE_END

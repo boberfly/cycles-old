@@ -476,16 +476,21 @@ Object *BlenderSync::sync_object(BL::Depsgraph &b_depsgraph,
     Scene::MotionType need_motion = scene->need_motion();
     if (need_motion != Scene::MOTION_NONE && object->mesh) {
       Mesh *mesh = object->mesh;
-      mesh->use_motion_blur = false;
-      mesh->motion_steps = 0;
-
       uint motion_steps;
 
       if (need_motion == Scene::MOTION_BLUR) {
         motion_steps = object_motion_steps(b_parent, b_ob);
         mesh->motion_steps = motion_steps;
-        if (motion_steps && object_use_deform_motion(b_parent, b_ob)) {
-          mesh->use_motion_blur = true;
+        bool deform_motion = object_use_deform_motion(b_parent, b_ob);
+        bool volume_motion = object_use_volume_motion(b_parent,
+                                                      b_ob,
+                                                      b_data,
+                                                      (int)b_scene.frame_current(),
+                                                      scene->params.intialized_openvdb);
+
+        if (motion_steps && (deform_motion || volume_motion)) {
+          mesh->use_motion_blur = deform_motion;
+          mesh->use_volume_motion_blur = volume_motion;
         }
       }
       else {

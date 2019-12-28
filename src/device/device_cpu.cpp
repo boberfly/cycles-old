@@ -499,8 +499,8 @@ class CPUDevice : public Device {
       s_info.offsets = 0;
 
       /* If image is sparse, cache info needed for index calculation. */
-      if(mem.grid_info && mem.grid_type == IMAGE_GRID_TYPE_SPARSE) {
-        device_memory *sparse_mem = (device_memory*)mem.grid_info;
+      if (mem.grid_info && mem.grid_type == IMAGE_GRID_TYPE_SPARSE) {
+        device_memory *sparse_mem = (device_memory *)mem.grid_info;
         s_info.offsets = (uint64_t)sparse_mem->host_pointer;
         s_info.remain_w = info.width % TILE_SIZE;
         s_info.remain_h = info.height % TILE_SIZE;
@@ -528,11 +528,11 @@ class CPUDevice : public Device {
     stats.mem_alloc(mem.device_size);
   }
 
-  void tex_free(device_memory& mem)
+  void tex_free(device_memory &mem)
   {
-    if(mem.device_pointer) {
-      if(mem.grid_info && mem.grid_type == IMAGE_GRID_TYPE_SPARSE) {
-        device_memory *grid_info = (device_memory*)mem.grid_info;
+    if (mem.device_pointer) {
+      if (mem.grid_info && mem.grid_type == IMAGE_GRID_TYPE_SPARSE) {
+        device_memory *grid_info = (device_memory *)mem.grid_info;
         tex_free(*grid_info);
       }
       mem.device_pointer = 0;

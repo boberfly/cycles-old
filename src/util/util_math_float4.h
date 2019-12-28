@@ -207,20 +207,20 @@ ccl_device_inline int4 operator<(const float4 &a, const float4 &b)
 
 ccl_device_inline int4 operator<(const float4 &a, const float &b)
 {
-#ifdef __KERNEL_SSE__
+#  ifdef __KERNEL_SSE__
   return a < make_float4(b);
-#else
+#  else
   return make_int4(a.x < b, a.y < b, a.z < b, a.w < b);
-#endif
+#  endif
 }
 
 ccl_device_inline int4 operator<(const float &a, const float4 &b)
 {
-#ifdef __KERNEL_SSE__
+#  ifdef __KERNEL_SSE__
   return make_float4(a) < b;
-#else
+#  else
   return make_int4(a < b.x, a < b.y, a < b.z, a < b.w);
-#endif
+#  endif
 }
 
 ccl_device_inline int4 operator>=(const float4 &a, const float4 &b)

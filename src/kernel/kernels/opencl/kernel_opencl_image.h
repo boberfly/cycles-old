@@ -98,20 +98,23 @@ ccl_device_inline float4 svm_image_texture_read(KernelGlobals *kg,
 /* Calculates the index for sparse volume textures. */
 ccl_device_inline float4 svm_image_texture_read_sparse(KernelGlobals *kg,
                                                 const ccl_global TextureInfo *info,
-                                                int id, int x, int y, int z)
+                                                int id,
+                                                int x,
+                                                int y,
+                                                int z)
 {
-  const SparseTextureInfo s_info = info->sparse_info;
-  const int *offsets = (const int*)s_info.offsets;
+  const int *offsets = (const int*)info->sparse_info.offsets;
 
-  int tile_start = offsets[(x >> TILE_INDEX_SHIFT) + s_info.tiled_w
-                   * ((y >> TILE_INDEX_SHIFT) + (z >> TILE_INDEX_SHIFT) * s_info.tiled_h)];
-  if(tile_start < 0) {
+  int tile_start = offsets[(x >> TILE_INDEX_SHIFT) +
+                           info->sparse_info.tiled_w * ((y >> TILE_INDEX_SHIFT) +
+                                                        (z >> TILE_INDEX_SHIFT) * info->sparse_info.tiled_h)];
+  if (tile_start < 0) {
     return make_float4(0.0f, 0.0f, 0.0f, 0.0f);
   }
-  int index = tile_start + (x & TILE_INDEX_MASK)
-                + ((x > s_info.div_w) ? s_info.remain_w : TILE_SIZE)
-            * ((y & TILE_INDEX_MASK) + (z & TILE_INDEX_MASK)
-               * ((y > s_info.div_h) ? s_info.remain_h : TILE_SIZE));
+  int index = tile_start + (x & TILE_INDEX_MASK) +
+              ((x > info->sparse_info.div_w) ? info->sparse_info.remain_w : TILE_SIZE) *
+                  ((y & TILE_INDEX_MASK) +
+                   (z & TILE_INDEX_MASK) * ((y > info->sparse_info.div_h) ? info->sparse_info.remain_h : TILE_SIZE));
   return svm_image_texture_read(kg, info, id, index);
 }
 
@@ -138,7 +141,7 @@ ccl_device_inline float4 svm_image_texture_read_3d(KernelGlobals *kg, int id, in
   const ccl_global TextureInfo *info = kernel_tex_info(kg, id);
 
   /* Wrap */
-  if(info->extension == EXTENSION_REPEAT) {
+  if (info->extension == EXTENSION_REPEAT) {
     x = svm_image_texture_wrap_periodic(x, info->width);
     y = svm_image_texture_wrap_periodic(y, info->height);
     z = svm_image_texture_wrap_periodic(z, info->depth);
@@ -149,7 +152,7 @@ ccl_device_inline float4 svm_image_texture_read_3d(KernelGlobals *kg, int id, in
     z = svm_image_texture_wrap_clamp(z, info->depth);
   }
 
-  if(info->sparse_info.offsets) {
+  if (info->sparse_info.offsets) {
     return svm_image_texture_read_sparse(kg, info, id, x, y, z);
   }
 

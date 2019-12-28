@@ -191,6 +191,7 @@ class device_memory {
  public:
   size_t memory_size()
   {
+    /* Not including grid_info. */
     return data_size * data_elements * datatype_size(data_type);
   }
   size_t memory_elements_size(int elements)
@@ -222,9 +223,9 @@ class device_memory {
   device_ptr device_pointer;
   void *host_pointer;
   void *shared_pointer;
+  void *grid_info;
   /* reference counter for shared_pointer */
   int shared_counter;
-  void *grid_info;
 
   virtual ~device_memory();
 
@@ -350,9 +351,9 @@ template<typename T> class device_vector : public device_memory {
     }
 
     data_size = new_size;
-    data_width = width;
-    data_height = height;
-    data_depth = depth;
+    data_width = dense_width = width;
+    data_height = dense_height = height;
+    data_depth = dense_depth = depth;
 
     return data();
   }

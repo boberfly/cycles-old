@@ -46,7 +46,7 @@ ccl_device_inline int4 select(const int4 &mask, const int4 &a, const int4 &b);
 #ifndef __KERNEL_OPENCL__
 ccl_device_inline bool any(const int4 &a);
 ccl_device_inline bool all(const int4 &a);
-#endif  /* __KERNEL_OPENCL__ */
+#endif /* __KERNEL_OPENCL__ */
 
 /*******************************************************************************
  * Definition.
@@ -178,7 +178,7 @@ ccl_device_inline bool all(const int4 &a)
 {
   return a.x && a.y && a.z && a.w;
 }
-#endif  /* __KERNEL_OPENCL__ */
+#endif /* __KERNEL_OPENCL__ */
 
 CCL_NAMESPACE_END
 

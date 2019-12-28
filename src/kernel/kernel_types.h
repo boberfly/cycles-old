@@ -1010,9 +1010,9 @@ typedef ccl_addr_space struct ccl_align(16) ShaderData
   differential3 ray_dP;
 
 #ifdef __VOLUME__
-	/* Normalized volume position, only set for volumes.
-	 * May be advected for motion blur. */
-	float3 P_v;
+  /* Normalized volume position, only set for volumes.
+   * May be advected for motion blur. */
+  float3 P_v;
 #endif
 
 #ifdef __OSL__
@@ -1276,6 +1276,8 @@ typedef struct KernelFilm {
 
   int pass_aov_color;
   int pass_aov_value;
+  int pad1;
+  int pad2;
 
   /* XYZ to rendering color space transform. float4 instead of float3 to
    * ensure consistent padding/alignment across devices. */
@@ -1297,8 +1299,6 @@ typedef struct KernelFilm {
   int display_divide_pass_stride;
   int use_display_exposure;
   int use_display_pass_alpha;
-
-  int pad1, pad2;
 } KernelFilm;
 static_assert_align(KernelFilm, 16);
 

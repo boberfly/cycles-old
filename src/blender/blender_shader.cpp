@@ -677,6 +677,7 @@ static ShaderNode *add_node(Scene *scene,
 #if 0
       if (b_image.is_updated()) {
         scene->image_manager->tag_reload_image(image->filename.string(),
+                                               string(),
                                                image->builtin_data,
                                                get_image_interpolation(b_image_node),
                                                get_image_extension(b_image_node),
@@ -726,6 +727,7 @@ static ShaderNode *add_node(Scene *scene,
 #if 0
       if (b_image.is_updated()) {
         scene->image_manager->tag_reload_image(env->filename.string(),
+                                               string(),
                                                env->builtin_data,
                                                get_image_interpolation(b_env_node),
                                                EXTENSION_REPEAT,
@@ -889,6 +891,7 @@ static ShaderNode *add_node(Scene *scene,
       point_density->add_image();
       b_point_density_node.cache_point_density(b_depsgraph);
       scene->image_manager->tag_reload_image(point_density->filename.string(),
+                                             string(),
                                              point_density->builtin_data,
                                              point_density->interpolation,
                                              EXTENSION_CLIP,

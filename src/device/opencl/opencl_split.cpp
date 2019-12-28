@@ -1172,9 +1172,9 @@ void OpenCLDevice::tex_free(device_memory &mem)
     }
   }
 
-  if(mem.grid_info && mem.grid_type == IMAGE_GRID_TYPE_SPARSE) {
-    device_memory *grid_info = (device_memory*)mem.grid_info;
-    if(grid_info->device_pointer) {
+  if (mem.grid_info && mem.grid_type == IMAGE_GRID_TYPE_SPARSE) {
+    device_memory *grid_info = (device_memory *)mem.grid_info;
+    if (grid_info->device_pointer) {
       stats.mem_free(grid_info->device_size);
       grid_info->device_pointer = 0;
       grid_info->device_size = 0;
@@ -1318,8 +1318,8 @@ void OpenCLDevice::flush_texture_buffers()
       s_info.offsets = 0;
 
       /* If image is sparse, cache info needed for index calculation. */
-      if(mem->grid_info && mem->grid_type == IMAGE_GRID_TYPE_SPARSE) {
-        device_memory *sparse_mem = (device_memory*)mem->grid_info;
+      if (mem->grid_info && mem->grid_type == IMAGE_GRID_TYPE_SPARSE) {
+        device_memory *sparse_mem = (device_memory *)mem->grid_info;
         s_info.offsets = (uint64_t)sparse_mem->host_pointer;
         s_info.remain_w = info.width % TILE_SIZE;
         s_info.remain_h = info.height % TILE_SIZE;

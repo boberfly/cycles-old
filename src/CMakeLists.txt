@@ -275,7 +275,7 @@ if(WITH_CYCLES_LOGGING)
   )
 endif()
 
-if(WITH_CYCLES_OPENVDB)
+if(WITH_OPENVDB)
   add_definitions(-DWITH_OPENVDB)
 
   if(WITH_OPENVDB_3_ABI_COMPATIBLE)
@@ -292,7 +292,7 @@ if(WITH_CYCLES_OPENVDB)
 
   include_directories(
     SYSTEM
-    ${OPENVDB_INCLUDE_DIR}
+    ${OPENVDB_INCLUDE_DIRS}
   )
 endif()
 

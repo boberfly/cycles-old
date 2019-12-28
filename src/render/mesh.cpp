@@ -453,6 +453,9 @@ Mesh::Mesh() : Node(node_type)
   subd_params = NULL;
 
   patch_table = NULL;
+
+  motion_steps = 0;
+  use_motion_blur = false;
   use_volume_motion_blur = false;
 }
 
@@ -1631,8 +1634,7 @@ void MeshManager::device_update_attributes(Device *device,
     }
 
     /* motion blur for volumes */
-    if(mesh->use_volume_motion_blur)
-    {
+    if (mesh->use_volume_motion_blur) {
       mesh_attributes[i].add(ATTR_STD_VOLUME_VELOCITY);
     }
   }

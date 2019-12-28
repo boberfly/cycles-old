@@ -77,6 +77,12 @@ set(SRC_HEADERS
   tile.h
 )
 
+if(WITH_OPENVDB)
+  list(APPEND SRC openvdb.cpp)
+  list(APPEND SRC_HEADERS openvdb.h)
+  list(APPEND INC_SYS ${TBB_INCLUDE_DIRS})
+endif()
+
 set(LIB
   cycles_bvh
 )

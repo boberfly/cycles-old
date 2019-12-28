@@ -165,7 +165,7 @@ class ImageManager {
     bool need_load;
     bool animated;
     bool is_volume;
-    bool isovalue;
+    float isovalue;
     float frame;
     InterpolationType interpolation;
     ExtensionType extension;
@@ -193,29 +193,20 @@ class ImageManager {
   void *oiio_texture_system;
   bool pack_images;
 
+  bool allocate_grid_info(Device *device, device_memory *tex_img, vector<int> *sparse_index);
+
   bool file_load_image_generic(Image *img, unique_ptr<ImageInput> *in);
 
-  bool allocate_grid_info(Device *device,
-                          device_memory *tex_img,
-                          vector<int> *sparse_index);
-
   template<typename DeviceType>
-  void file_load_failed(Image *img,
-                        ImageDataType type,
-                        device_vector<DeviceType> *tex_img);
+  void file_load_failed(Image *img, ImageDataType type, device_vector<DeviceType> *tex_img);
 
 #ifdef WITH_OPENVDB
   template<typename DeviceType>
-  void file_load_extern_vdb(Device *device,
-                            Image *img,
-                            ImageDataType type);
+  void file_load_extern_vdb(Device *device, Image *img, ImageDataType type);
 #endif
 
   template<TypeDesc::BASETYPE FileFormat, typename StorageType, typename DeviceType>
-  bool file_load_image(Device *device,
-                       Image *img,
-                       ImageDataType type,
-                       int texture_limit);
+  void file_load_image(Device *device, Image *img, ImageDataType type, int texture_limit);
 
   void metadata_detect_colorspace(ImageMetaData &metadata, const char *file_format);
 
