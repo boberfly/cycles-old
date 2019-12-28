@@ -115,7 +115,6 @@ class ImageTextureNode : public ImageSlotTextureNode {
   float3 vector;
   float3 vector_dx, vector_dy;
   ccl::vector<int> tiles;
-  bool is_tiled;
 
   /* Runtime. */
   bool is_float;
