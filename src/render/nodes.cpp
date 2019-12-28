@@ -383,6 +383,7 @@ void ImageTextureNode::compile(SVMCompiler &compiler)
 
       ImageMetaData metadata;
       int slot = image_manager->add_image(tile_name,
+                                          string(),
                                           builtin_data,
                                           animated,
                                           0,
@@ -390,6 +391,8 @@ void ImageTextureNode::compile(SVMCompiler &compiler)
                                           extension,
                                           alpha_type,
                                           colorspace,
+                                          false,
+                                          0.0f,
                                           metadata);
       slots.push_back(slot);
 
@@ -507,6 +510,7 @@ void ImageTextureNode::compile(OSLCompiler &compiler)
     }
     else {
       int slot = image_manager->add_image(filename.string(),
+                                          string(),
                                           builtin_data,
                                           animated,
                                           0,
@@ -514,6 +518,8 @@ void ImageTextureNode::compile(OSLCompiler &compiler)
                                           extension,
                                           alpha_type,
                                           colorspace,
+                                          false,
+                                          0.0f,
                                           metadata);
       slots.push_back(slot);
     }
@@ -625,6 +631,7 @@ void EnvironmentTextureNode::compile(SVMCompiler &compiler)
   if (slots.empty()) {
     ImageMetaData metadata;
     int slot = image_manager->add_image(filename.string(),
+                                        string(),
                                         builtin_data,
                                         animated,
                                         0,
@@ -632,6 +639,8 @@ void EnvironmentTextureNode::compile(SVMCompiler &compiler)
                                         EXTENSION_REPEAT,
                                         alpha_type,
                                         colorspace,
+                                        false,
+                                        0.0f,
                                         metadata);
     slots.push_back(slot);
     is_float = metadata.is_float;
@@ -687,6 +696,7 @@ void EnvironmentTextureNode::compile(OSLCompiler &compiler)
     }
     else {
       int slot = image_manager->add_image(filename.string(),
+                                          string(),
                                           builtin_data,
                                           animated,
                                           0,
@@ -694,6 +704,8 @@ void EnvironmentTextureNode::compile(OSLCompiler &compiler)
                                           EXTENSION_REPEAT,
                                           alpha_type,
                                           colorspace,
+                                          false,
+                                          0.0f,
                                           metadata);
       slots.push_back(slot);
     }
@@ -1728,6 +1740,7 @@ PointDensityTextureNode::~PointDensityTextureNode()
 {
   if (image_manager) {
     image_manager->remove_image(filename.string(),
+                                string(),
                                 builtin_data,
                                 interpolation,
                                 EXTENSION_CLIP,
@@ -1760,6 +1773,7 @@ void PointDensityTextureNode::add_image()
   if (slot == -1) {
     ImageMetaData metadata;
     slot = image_manager->add_image(filename.string(),
+                                    string(),
                                     builtin_data,
                                     false,
                                     0,
@@ -1767,6 +1781,8 @@ void PointDensityTextureNode::add_image()
                                     EXTENSION_CLIP,
                                     IMAGE_ALPHA_AUTO,
                                     u_colorspace_raw,
+                                    false,
+                                    0.0f,
                                     metadata);
   }
 }

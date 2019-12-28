@@ -37,6 +37,7 @@ device_memory::device_memory(Device *device, const char *name, MemoryType type)
       device_pointer(0),
       host_pointer(0),
       shared_pointer(0),
+      grid_info(0),
       shared_counter(0)
 {
 }

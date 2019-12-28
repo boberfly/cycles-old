@@ -182,7 +182,7 @@ if(WITH_CYCLES_OSL)
   if(WIN32 AND MSVC)
     set(RTTI_DISABLE_FLAGS "/GR- -DBOOST_NO_RTTI -DBOOST_NO_TYPEID")
   elseif(CMAKE_COMPILER_IS_GNUCC OR (CMAKE_C_COMPILER_ID MATCHES "Clang"))
-    set(RTTI_DISABLE_FLAGS "-fno-rtti -DBOOST_NO_RTTI -DBOOST_NO_TYPEID")
+    set(RTTI_DISABLE_FLAGS "-DBOOST_NO_RTTI -DBOOST_NO_TYPEID")
   endif()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${RTTI_DISABLE_FLAGS}")
 endif()
@@ -272,6 +272,27 @@ if(WITH_CYCLES_LOGGING)
     SYSTEM
     ${GLOG_INCLUDE_DIRS}
     ${GFLAGS_INCLUDE_DIRS}
+  )
+endif()
+
+if(WITH_OPENVDB)
+  add_definitions(-DWITH_OPENVDB)
+
+  if(WITH_OPENVDB_3_ABI_COMPATIBLE)
+    add_definitions(
+      -DOPENVDB_3_ABI_COMPATIBLE
+    )
+  endif()
+
+  if(WITH_OPENVDB_BLOSC)
+    add_definitions(
+      -DWITH_OPENVDB_BLOSC
+    )
+  endif()
+
+  include_directories(
+    SYSTEM
+    ${OPENVDB_INCLUDE_DIRS}
   )
 endif()
 

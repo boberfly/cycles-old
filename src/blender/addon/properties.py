@@ -1112,6 +1112,12 @@ class CyclesObjectSettings(bpy.types.PropertyGroup):
         default=True,
     )
 
+    use_volume_motion: BoolProperty(
+        name="Use Volume Motion",
+        description="Use volume motion blur for this object",
+        default=False,
+    )
+
     motion_steps: IntProperty(
         name="Motion Steps",
         description="Control accuracy of motion blur, more steps gives more memory usage (actual number of steps is 2^(steps - 1))",

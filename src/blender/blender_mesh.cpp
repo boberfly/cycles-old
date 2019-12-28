@@ -280,50 +280,86 @@ static void mikk_compute_tangents(
 
 /* Create Volume Attribute */
 
-static void create_mesh_volume_attribute(
-    BL::Object &b_ob, Mesh *mesh, ImageManager *image_manager, AttributeStandard std, float frame)
+static void create_mesh_volume_attribute(Mesh *mesh,
+                                         ImageManager *image_manager,
+                                         AttributeStandard std,
+                                         string filename,
+                                         void *builtin_data,
+                                         float frame)
 {
-  BL::FluidDomainSettings b_domain = object_fluid_domain_find(b_ob);
-
-  if (!b_domain)
-    return;
-
-  mesh->volume_isovalue = b_domain.clipping();
+  ImageMetaData metadata;
+  string grid_name;
+  if (filename.empty()) {
+    /* Built-in smoke. */
+    filename = Attribute::standard_name(std);
+  }
+  else {
+    /* External VDB. */
+    grid_name = Attribute::standard_name(std);
+  }
 
   Attribute *attr = mesh->attributes.add(std);
   VoxelAttribute *volume_data = attr->data_voxel();
-  ImageMetaData metadata;
-  bool animated = false;
 
   volume_data->manager = image_manager;
-  volume_data->slot = image_manager->add_image(Attribute::standard_name(std),
-                                               b_ob.ptr.data,
-                                               animated,
+  volume_data->slot = image_manager->add_image(filename,
+                                               grid_name,
+                                               builtin_data,
+                                               false,
                                                frame,
                                                INTERPOLATION_LINEAR,
                                                EXTENSION_CLIP,
                                                IMAGE_ALPHA_AUTO,
                                                u_colorspace_raw,
+                                               true,
+                                               mesh->volume_isovalue,
                                                metadata);
 }
 
-static void create_mesh_volume_attributes(Scene *scene, BL::Object &b_ob, Mesh *mesh, float frame)
+static void create_mesh_volume_attributes(
+    Scene *scene, BL::BlendData &b_data, BL::Object &b_ob, Mesh *mesh, float frame)
 {
   /* for smoke volume rendering */
+  BL::SmokeDomainSettings b_domain = object_smoke_domain_find(b_ob);
+
+  if (!b_domain)
+    return;
+
+  string filename;
+  void *builtin_data = NULL;
+
+  if (volume_get_frame_file(b_data, b_ob, b_domain, (int)frame, filename)) {
+#ifdef WITH_OPENVDB
+    if (string_endswith(filename, ".vdb")) {
+      init_openvdb_in_scene(scene->params.intialized_openvdb);
+    }
+#endif
+  }
+  else {
+    filename = string();
+    builtin_data = b_ob.ptr.data;
+  }
+
+  mesh->volume_isovalue = b_domain.clipping();
+
   if (mesh->need_attribute(scene, ATTR_STD_VOLUME_DENSITY))
-    create_mesh_volume_attribute(b_ob, mesh, scene->image_manager, ATTR_STD_VOLUME_DENSITY, frame);
+    create_mesh_volume_attribute(
+        mesh, scene->image_manager, ATTR_STD_VOLUME_DENSITY, filename, builtin_data, frame);
   if (mesh->need_attribute(scene, ATTR_STD_VOLUME_COLOR))
-    create_mesh_volume_attribute(b_ob, mesh, scene->image_manager, ATTR_STD_VOLUME_COLOR, frame);
+    create_mesh_volume_attribute(
+        mesh, scene->image_manager, ATTR_STD_VOLUME_COLOR, filename, builtin_data, frame);
   if (mesh->need_attribute(scene, ATTR_STD_VOLUME_FLAME))
-    create_mesh_volume_attribute(b_ob, mesh, scene->image_manager, ATTR_STD_VOLUME_FLAME, frame);
+    create_mesh_volume_attribute(
+        mesh, scene->image_manager, ATTR_STD_VOLUME_FLAME, filename, builtin_data, frame);
   if (mesh->need_attribute(scene, ATTR_STD_VOLUME_HEAT))
-    create_mesh_volume_attribute(b_ob, mesh, scene->image_manager, ATTR_STD_VOLUME_HEAT, frame);
+    create_mesh_volume_attribute(
+        mesh, scene->image_manager, ATTR_STD_VOLUME_HEAT, filename, builtin_data, frame);
   if (mesh->need_attribute(scene, ATTR_STD_VOLUME_TEMPERATURE))
     create_mesh_volume_attribute(
-        b_ob, mesh, scene->image_manager, ATTR_STD_VOLUME_TEMPERATURE, frame);
-  if (mesh->need_attribute(scene, ATTR_STD_VOLUME_VELOCITY))
+        mesh, scene->image_manager, ATTR_STD_VOLUME_TEMPERATURE, filename, builtin_data, frame);
+  if (mesh->need_attribute(scene, ATTR_STD_VOLUME_VELOCITY) || mesh->use_volume_motion_blur)
     create_mesh_volume_attribute(
-        b_ob, mesh, scene->image_manager, ATTR_STD_VOLUME_VELOCITY, frame);
+        mesh, scene->image_manager, ATTR_STD_VOLUME_VELOCITY, filename, builtin_data, frame);
 }
 
 /* Create vertex color attributes. */
@@ -1084,7 +1120,7 @@ Mesh *BlenderSync::sync_mesh(BL::Depsgraph &b_depsgraph,
         else
           create_mesh(scene, mesh, b_mesh, used_shaders, false);
 
-        create_mesh_volume_attributes(scene, b_ob, mesh, b_scene.frame_current());
+        create_mesh_volume_attributes(scene, b_data, b_ob, mesh, b_scene.frame_current());
       }
 
       /* Sync hair curves. */

@@ -47,6 +47,40 @@ ccl_device_inline float3 volume_normalized_position(KernelGlobals *kg,
   return P;
 }
 
+/* Returns normalized P.
+ * If motion blur is enabled, returns normalized and advected P. */
+
+ccl_device_inline float3 volume_get_position(KernelGlobals *kg, const ShaderData *sd)
+{
+  float3 P = volume_normalized_position(kg, sd, sd->P);
+
+#  ifdef __OBJECT_MOTION__
+  /* Eulerian motion blur. */
+  if (kernel_data.cam.shuttertime != -1.0f) {
+    AttributeDescriptor v_desc = find_attribute(kg, sd, ATTR_STD_VOLUME_VELOCITY);
+
+    if (v_desc.offset != ATTR_STD_NOT_FOUND) {
+      InterpolationType interp = (sd->flag & SD_VOLUME_CUBIC) ? INTERPOLATION_CUBIC :
+                                                                INTERPOLATION_NONE;
+
+      /* Find velocity. */
+      float3 velocity = float4_to_float3(
+          kernel_tex_image_interp_3d(kg, v_desc.offset, P.x, P.y, P.z, interp));
+
+      /* Find advected velocity. */
+      P = volume_normalized_position(kg, sd, sd->P + velocity * sd->time);
+      velocity = float4_to_float3(
+          kernel_tex_image_interp_3d(kg, v_desc.offset, P.x, P.y, P.z, interp));
+
+      /* Find advected P. */
+      P = volume_normalized_position(kg, sd, sd->P + velocity * sd->time);
+    }
+  }
+#  endif
+
+  return P;
+}
+
 ccl_device float volume_attribute_float(KernelGlobals *kg,
                                         const ShaderData *sd,
                                         const AttributeDescriptor desc)
@@ -62,10 +96,9 @@ ccl_device float3 volume_attribute_float3(KernelGlobals *kg,
                                           const ShaderData *sd,
                                           const AttributeDescriptor desc)
 {
-  float3 P = volume_normalized_position(kg, sd, sd->P);
   InterpolationType interp = (sd->flag & SD_VOLUME_CUBIC) ? INTERPOLATION_CUBIC :
                                                             INTERPOLATION_NONE;
-  float4 r = kernel_tex_image_interp_3d(kg, desc.offset, P.x, P.y, P.z, interp);
+  float4 r = kernel_tex_image_interp_3d(kg, desc.offset, sd->P_v.x, sd->P_v.y, sd->P_v.z, interp);
 
   if (r.w > 1e-6f && r.w != 1.0f) {
     /* For RGBA colors, unpremultiply after interpolation. */

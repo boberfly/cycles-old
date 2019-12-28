@@ -96,6 +96,7 @@ set(SRC_HEADERS
   util_sky_model.cpp
   util_sky_model.h
   util_sky_model_data.h
+  util_sparse_grid.h
   util_avxf.h
   util_avxb.h
   util_sseb.h
