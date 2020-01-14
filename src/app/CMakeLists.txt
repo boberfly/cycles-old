@@ -91,7 +91,7 @@ macro(cycles_target_link_libraries target)
     target_link_libraries(${target} ${OPENSUBDIV_LIBRARIES})
   endif()
   if(WITH_OPENCOLORIO)
-    target_link_libraries(${target} ${OPENCOLORIO_LIBRARIES})
+    target_link_libraries(${target} ${${OCIO_LIBRARIES}})
   endif()
   target_link_libraries(
     ${target}
@@ -153,7 +153,6 @@ if(WITH_CYCLES_CUBIN_COMPILER)
     include_directories(${INC})
     target_link_libraries(cycles_cubin_cc
       extern_cuew
-      ${OPENIMAGEIO_LIBRARIES}
       ${OPENEXR_LIBRARIES}
       #${OPENJPEG_LIBRARIES}
       ${PUGIXML_LIBRARIES}
