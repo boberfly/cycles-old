@@ -17,10 +17,10 @@ set(LIBRARIES
   cycles_util
   ${BLENDER_GL_LIBRARIES}
   ${CYCLES_APP_GLEW_LIBRARY}
-  ${PNG_LIBRARIES}
-  ${JPEG_LIBRARIES}
-  ${ZLIB_LIBRARIES}
-  ${TIFF_LIBRARY}
+  #${PNG_LIBRARIES}
+  #${JPEG_LIBRARIES}
+  #${ZLIB_LIBRARIES}
+  #${TIFF_LIBRARY}
   ${PTHREADS_LIBRARIES}
 )
 
@@ -55,12 +55,13 @@ endif()
 
 link_directories(${OPENIMAGEIO_LIBPATH}
                  ${BOOST_LIBPATH}
-                 ${PNG_LIBPATH}
-                 ${JPEG_LIBPATH}
-                 ${ZLIB_LIBPATH}
-                 ${TIFF_LIBPATH}
-                 ${OPENEXR_LIBPATH}
-                 ${OPENJPEG_LIBPATH})
+                 #${PNG_LIBPATH}
+                 #${JPEG_LIBPATH}
+                 #${ZLIB_LIBPATH}
+                 #${TIFF_LIBPATH}
+                 #${OPENEXR_LIBPATH}
+                 #${OPENJPEG_LIBPATH}
+                 )
 
 if(WITH_OPENCOLORIO)
   link_directories(${OPENCOLORIO_LIBPATH})
@@ -90,13 +91,13 @@ macro(cycles_target_link_libraries target)
     target_link_libraries(${target} ${OPENSUBDIV_LIBRARIES})
   endif()
   if(WITH_OPENCOLORIO)
-    target_link_libraries(${target} ${OPENCOLORIO_LIBRARIES})
+    target_link_libraries(${target} ${OCIO_LIBRARIES})
   endif()
   target_link_libraries(
     ${target}
     ${OPENIMAGEIO_LIBRARIES}
-    ${OPENEXR_LIBRARIES}
-    ${OPENJPEG_LIBRARIES}
+    #${OPENEXR_LIBRARIES}
+    #${OPENJPEG_LIBRARIES}
     ${PUGIXML_LIBRARIES}
     ${BOOST_LIBRARIES}
     ${CMAKE_DL_LIBS}
@@ -154,7 +155,7 @@ if(WITH_CYCLES_CUBIN_COMPILER)
       extern_cuew
       ${OPENIMAGEIO_LIBRARIES}
       ${OPENEXR_LIBRARIES}
-      ${OPENJPEG_LIBRARIES}
+      #${OPENJPEG_LIBRARIES}
       ${PUGIXML_LIBRARIES}
       ${BOOST_LIBRARIES}
       ${PLATFORM_LINKLIBS}

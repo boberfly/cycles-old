@@ -94,7 +94,7 @@ if(CYCLES_STANDALONE_REPOSITORY)
   # OpenShadingLanguage
   if(WITH_CYCLES_OSL)
     find_package(OpenShadingLanguage REQUIRED)
-    find_package(LLVM REQUIRED)
+    #find_package(LLVM REQUIRED)
   endif()
 
   ####
@@ -150,6 +150,13 @@ if(CYCLES_STANDALONE_REPOSITORY)
   if(WITH_CYCLES_OPENSUBDIV)
     find_package(OpenSubdiv REQUIRED)
     set(WITH_OPENSUBDIV ON)
+  endif()
+  
+  ####
+  # OptiX
+  if(WITH_CYCLES_DEVICE_OPTIX)
+    find_package(OptiX REQUIRED)
+    set(WITH_OPTIX ON)
   endif()
 
   unset(_lib_DIR)
