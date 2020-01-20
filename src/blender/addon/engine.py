@@ -263,20 +263,20 @@ def list_render_passes(srl):
     if crl.use_pass_volume_indirect:           yield ("VolumeInd",                     "RGB", 'COLOR')
 
     # Cryptomatte passes.
-     if crl.use_pass_crypto_object:
-         for i in range(0, crl.pass_crypto_depth, 2):
+    if crl.use_pass_crypto_object:
+        for i in range(0, crl.pass_crypto_depth, 2):
             yield ("CryptoObject" + '{:02d}'.format(i//2), "RGBA", 'COLOR')
-     if crl.use_pass_crypto_material:
-         for i in range(0, crl.pass_crypto_depth, 2):
+    if crl.use_pass_crypto_material:
+        for i in range(0, crl.pass_crypto_depth, 2):
             yield ("CryptoMaterial" + '{:02d}'.format(i//2), "RGBA", 'COLOR')
-     if srl.cycles.use_pass_crypto_asset:
-         for i in range(0, srl.cycles.pass_crypto_depth, 2):
+    if srl.cycles.use_pass_crypto_asset:
+        for i in range(0, srl.cycles.pass_crypto_depth, 2):
             yield ("CryptoAsset" + '{:02d}'.format(i//2), "RGBA", 'COLOR')
 
     # Denoising passes.
-     if crl.use_denoising or crl.denoising_store_passes:
+    if crl.use_denoising or crl.denoising_store_passes:
         yield ("Noisy Image", "RGBA", 'COLOR')
-         if crl.denoising_store_passes:
+        if crl.denoising_store_passes:
             yield ("Denoising Normal",          "XYZ", 'VECTOR')
             yield ("Denoising Albedo",          "RGB", 'COLOR')
             yield ("Denoising Depth",           "Z",   'VALUE')

@@ -41,9 +41,13 @@ if(WITH_CYCLES_STANDALONE)
 endif()
 
 if(CYCLES_STANDALONE_REPOSITORY)
-  list(APPEND INC_SYS ../../third_party/numaapi/include)
+  list(APPEND INC_SYS
+    ../../third_party/numaapi/include
+  )
 else()
-  list(APPEND INC_SYS ../../numaapi/include)
+  list(APPEND INC_SYS
+    ../../numaapi/include
+  )
 endif()
 
 set(SRC_HEADERS
@@ -143,6 +147,7 @@ set(SRC_HEADERS
   util_types_ushort4.h
   util_types_vector3.h
   util_types_vector3_impl.h
+  util_unique_ptr.h
   util_vector.h
   util_version.h
   util_view.h
