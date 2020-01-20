@@ -59,7 +59,7 @@ link_directories(${OPENIMAGEIO_LIBPATH}
                  #${JPEG_LIBPATH}
                  #${ZLIB_LIBPATH}
                  #${TIFF_LIBPATH}
-                 #${OPENEXR_LIBPATH}
+                 ${OPENEXR_LIBPATH}
                  #${OPENJPEG_LIBPATH}
                  )
 
@@ -99,7 +99,7 @@ macro(cycles_target_link_libraries target)
   target_link_libraries(
     ${target}
     ${OPENIMAGEIO_LIBRARIES}
-    #${OPENEXR_LIBRARIES}
+    ${OPENEXR_LIBRARIES}
     #${OPENJPEG_LIBRARIES}
     ${PUGIXML_LIBRARIES}
     ${BOOST_LIBRARIES}
