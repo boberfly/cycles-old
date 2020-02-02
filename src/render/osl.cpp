@@ -16,7 +16,6 @@
 
 #include "device/device.h"
 
-#include "render/background.h"
 #include "render/colorspace.h"
 #include "render/graph.h"
 #include "render/light.h"
@@ -120,9 +119,7 @@ void OSLShaderManager::device_update(Device *device,
     thread_scoped_lock lock(ss_mutex);
 
     OSLCompiler compiler(this, services, ss, scene);
-    compiler.background = (shader == scene->background->shader);
-    if( !compiler.background )
-      compiler.background = (shader == scene->default_background);
+    compiler.background = (shader == scene->default_background);
     compiler.compile(og, shader);
 
     if (shader->use_mis && shader->has_surface_emission)
@@ -134,11 +131,7 @@ void OSLShaderManager::device_update(Device *device,
   og->ts = ts;
   og->services = services;
 
-  int background_id = 0;
-  if( scene->background->shader )
-    background_id = scene->shader_manager->get_shader_id(scene->background->shader);
-  else
-    background_id = scene->shader_manager->get_shader_id(scene->default_background);
+  int background_id = scene->shader_manager->get_shader_id(scene->default_background);
   og->background_state = og->surface_state[background_id & SHADER_MASK];
   og->use = true;
 
