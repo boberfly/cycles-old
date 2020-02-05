@@ -135,7 +135,7 @@ if(CYCLES_STANDALONE_REPOSITORY)
   ####
   # embree
   if(WITH_CYCLES_EMBREE)
-    find_package(embree 3.2.4 REQUIRED)
+    find_package(Embree 3.2.4 REQUIRED)
   endif()
 
   ####
