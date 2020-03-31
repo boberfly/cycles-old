@@ -62,8 +62,8 @@ elseif(MSVC)
 	set(ZLIB_INCLUDE_DIR ${_lib_DIR}/zlib/include)
 	set(ZLIB_LIBRARY ${_lib_DIR}/zlib/lib/libz_st.lib)
 	set(ZLIB_DIR ${_lib_DIR}/zlib)
-	find_package(ZLIB REQUIRED)
-	list(APPEND PLATFORM_LINKLIBS ${ZLIB_LIBRARIES})
+	#find_package(ZLIB REQUIRED)
+	#list(APPEND PLATFORM_LINKLIBS ${ZLIB_LIBRARIES})
 
 	# TODO(sergey): On Windows llvm-config doesn't give proper results for the
 	# library names, use hardcoded libraries for now.
@@ -78,24 +78,24 @@ elseif(MSVC)
 	endforeach()
 
 	# On Windows we use precompiled GLEW and GLUT.
-	_set_default(GLEW_ROOT_DIR "${_lib_DIR}/opengl")
+	#_set_default(GLEW_ROOT_DIR "${_lib_DIR}/opengl")
 	_set_default(CYCLES_GLUT "${_lib_DIR}/opengl")
 	set(GLUT_LIBRARIES "${_lib_DIR}/opengl/lib/freeglut_static.lib")
 
 	set(Boost_USE_STATIC_RUNTIME OFF)
 	set(Boost_USE_MULTITHREADED ON)
-	set(Boost_USE_STATIC_LIBS ON)
+	set(Boost_USE_STATIC_LIBS OFF)
 
 	# Special tricks for precompiled PThreads.
-	set(PTHREADS_LIBRARIES "${_lib_DIR}/pthreads/lib/pthreadVC3.lib")
-	include_directories("${_lib_DIR}/pthreads/include")
+	#set(PTHREADS_LIBRARIES "${_lib_DIR}/pthreads/lib/pthreadVC3.lib")
+	#include_directories("${_lib_DIR}/pthreads/include")
 
 	# We need to tell compiler we're gonna to use static versions
 	# of OpenImageIO and GL*, otherwise linker will try to use
 	# dynamic one which we don't have and don't want even.
 	add_definitions(
-		-DOIIO_STATIC_BUILD
-		-DGLEW_STATIC
+		#-DOIIO_STATIC_BUILD
+		#-DGLEW_STATIC
 		-DFREEGLUT_STATIC
 		-DFREEGLUT_LIB_PRAGMAS=0
 	)

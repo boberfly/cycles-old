@@ -18,6 +18,7 @@
 #define __UTIL_LOGGING_H__
 
 #if defined(WITH_CYCLES_LOGGING) && !defined(__KERNEL_GPU__)
+#  define GLOG_NO_ABBREVIATED_SEVERITIES
 #  include <gflags/gflags.h>
 #  include <glog/logging.h>
 #endif
