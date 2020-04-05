@@ -136,6 +136,7 @@ if(CYCLES_STANDALONE_REPOSITORY)
   # embree
   if(WITH_CYCLES_EMBREE)
     find_package(Embree 3.8.0 REQUIRED)
+    find_package(TBB REQUIRED)
   endif()
 
   ####
