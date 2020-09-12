@@ -43,7 +43,9 @@ set(LIB
 
   ${OSL_LIBRARIES}
   ${OPENIMAGEIO_LIBRARIES}
-  ${LLVM_LIBRARY}
+#@GafferCycles BEGIN
+  #${LLVM_LIBRARY}
+#@GafferCycles END
 )
 
 # OSL and LLVM are built without RTTI
