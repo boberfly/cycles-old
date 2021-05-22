@@ -240,7 +240,10 @@ void Session::run_gpu()
 
     /* Don't go in pause mode when image was rendered with preview kernels
      * When feature kernels become available the session will be reset. */
-    else if (no_tiles && kernel_state == DEVICE_KERNEL_WAITING_FOR_FEATURE_KERNEL) {
+    //@GafferCycles BEGIN
+    //else if (no_tiles && kernel_state == DEVICE_KERNEL_WAITING_FOR_FEATURE_KERNEL) {
+    if (no_tiles && kernel_state == DEVICE_KERNEL_WAITING_FOR_FEATURE_KERNEL) {
+    //@GafferCycles END
       time_sleep(0.1);
     }
     else if (no_tiles && kernel_state == DEVICE_KERNEL_FEATURE_KERNEL_AVAILABLE) {
@@ -656,7 +659,10 @@ void Session::run_cpu()
 
     /* Don't go in pause mode when preview kernels are used
      * When feature kernels become available the session will be reset. */
-    else if (no_tiles && kernel_state == DEVICE_KERNEL_WAITING_FOR_FEATURE_KERNEL) {
+    //@GafferCycles BEGIN
+    //else if (no_tiles && kernel_state == DEVICE_KERNEL_WAITING_FOR_FEATURE_KERNEL) {
+    if (no_tiles && kernel_state == DEVICE_KERNEL_WAITING_FOR_FEATURE_KERNEL) {
+    //@GafferCycles END
       time_sleep(0.1);
     }
     else if (no_tiles && kernel_state == DEVICE_KERNEL_FEATURE_KERNEL_AVAILABLE) {
@@ -1157,7 +1163,10 @@ bool Session::render_need_denoise(bool &delayed)
     return false;
   }
 
-  if (params.background) {
+  // @GafferCycles BEGIN
+  //if (params.background) {
+  if (params.background && !params.denoising_start_sample) {
+  // @GafferCycles END
     /* Background render, only denoise when rendering the last sample. */
     return tile_manager.done();
   }

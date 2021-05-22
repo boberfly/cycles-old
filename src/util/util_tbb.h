@@ -22,6 +22,9 @@
 #include "util_windows.h"
 
 #define TBB_SUPPRESS_DEPRECATED_MESSAGES 1
+//@GafferCycles BEGIN
+#define TBB_PREVIEW_GLOBAL_CONTROL 1
+//@GafferCycles END
 #include <tbb/tbb.h>
 
 #if TBB_INTERFACE_VERSION_MAJOR >= 10

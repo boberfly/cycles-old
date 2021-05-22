@@ -243,10 +243,12 @@ if(CYCLES_STANDALONE_REPOSITORY)
     set(OPENJPEG_LIBRARY ${_cycles_lib_dir}/openjpeg/lib/openjp2${CMAKE_STATIC_LIBRARY_SUFFIX})
   endif()
 
-  find_package(JPEG REQUIRED)
-  find_package(OpenJPEG REQUIRED)
-  find_package(TIFF REQUIRED)
-  find_package(PNG REQUIRED)
+  #@GafferCycles BEGIN
+  #find_package(JPEG REQUIRED)
+  #find_package(OpenJPEG REQUIRED)
+  #find_package(TIFF REQUIRED)
+  #find_package(PNG REQUIRED)
+  #@GafferCycles END
 endif()
 
 ###########################################################################
@@ -291,7 +293,9 @@ if(WITH_CYCLES_OSL)
     endif()
 
     find_package(OSL REQUIRED)
-    find_package(LLVM REQUIRED)
+    #@GafferCycles BEGIN
+    #find_package(LLVM REQUIRED)
+    #@GafferCycles END
 
     if(MSVC AND EXISTS ${_cycles_lib_dir})
       # TODO(sergey): On Windows llvm-config doesn't give proper results for the
