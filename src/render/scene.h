@@ -19,9 +19,11 @@
 
 #include "bvh/bvh_params.h"
 
+#include "render/film.h"
 #include "render/image.h"
 #include "render/shader.h"
 
+#include "device/device.h"
 #include "device/device_memory.h"
 
 #include "util/util_param.h"
@@ -34,8 +36,10 @@
 
 CCL_NAMESPACE_BEGIN
 
+class AlembicProcedural;
 class AttributeRequestSet;
 class Background;
+class BVH;
 class Camera;
 class Device;
 class DeviceInfo;
@@ -51,6 +55,8 @@ class ObjectManager;
 class ParticleSystemManager;
 class ParticleSystem;
 class PointCloud;
+class Procedural;
+class ProceduralManager;
 class CurveSystemManager;
 class Shader;
 class ShaderManager;
@@ -58,6 +64,8 @@ class Progress;
 class BakeManager;
 class BakeData;
 class RenderStats;
+class SceneUpdateStats;
+class Volume;
 
 /* Scene Device Data */
 
@@ -221,7 +229,6 @@ class SceneParams {
   int num_bvh_time_steps;
   int hair_subdivisions;
   CurveShapeType hair_shape;
-  bool persistent_data;
   int texture_limit;
   TextureCacheParams texture;
 
@@ -237,7 +244,6 @@ class SceneParams {
     num_bvh_time_steps = 0;
     hair_subdivisions = 3;
     hair_shape = CURVE_RIBBON;
-    persistent_data = false;
     texture_limit = 0;
     background = true;
   }
@@ -250,7 +256,7 @@ class SceneParams {
              use_bvh_unaligned_nodes == params.use_bvh_unaligned_nodes &&
              num_bvh_time_steps == params.num_bvh_time_steps &&
              hair_subdivisions == params.hair_subdivisions && hair_shape == params.hair_shape &&
-             persistent_data == params.persistent_data && texture_limit == params.texture_limit);
+             texture_limit == params.texture_limit);
   }
 
   int curve_subdivisions()
@@ -262,12 +268,13 @@ class SceneParams {
 
 /* Scene */
 
-class Scene {
+class Scene : public NodeOwner {
  public:
   /* Optional name. Is used for logging and reporting. */
   string name;
 
   /* data */
+  BVH *bvh;
   Camera *camera;
   Camera *dicing_camera;
   LookupTables *lookup_tables;
@@ -281,6 +288,8 @@ class Scene {
   vector<Shader *> shaders;
   vector<Light *> lights;
   vector<ParticleSystem *> particle_systems;
+  vector<Pass> passes;
+  vector<Procedural *> procedurals;
 
   /* data managers */
   ImageManager *image_manager;
@@ -290,6 +299,7 @@ class Scene {
   ObjectManager *object_manager;
   ParticleSystemManager *particle_system_manager;
   BakeManager *bake_manager;
+  ProceduralManager *procedural_manager;
 
   /* default shaders */
   Shader *default_surface;
@@ -307,6 +317,9 @@ class Scene {
 
   /* mutex must be locked manually by callers */
   thread_mutex mutex;
+
+  /* scene update statistics */
+  SceneUpdateStats *update_stats;
 
   Scene(const SceneParams &params, Device *device);
   ~Scene();
@@ -328,7 +341,10 @@ class Scene {
 
   void collect_statistics(RenderStats *stats);
 
-#if 0
+  void enable_update_stats();
+
+  bool update(Progress &progress, bool &kernel_switch_needed);
+
   /* This function is used to create a node of a specified type instead of
    * calling 'new', and sets the scene as the owner of the node.
    * The function has overloads that will also add the created node to the right
@@ -353,7 +369,27 @@ class Scene {
     assert(node->get_owner() == this);
     delete_node_impl(node);
   }
-#endif
+
+  /* Same as above, but specify the actual owner.
+   */
+  template<typename T> void delete_node(T *node, const NodeOwner *owner)
+  {
+    assert(node->get_owner() == owner);
+    delete_node_impl(node);
+    (void)owner;
+  }
+
+  /* Remove all nodes in the set from the appropriate data arrays, and tag the
+   * specific managers for an update. This assumes that the scene owns the nodes.
+   */
+  template<typename T> void delete_nodes(const set<T *> &nodes)
+  {
+    delete_nodes(nodes, this);
+  }
+
+  /* Same as above, but specify the actual owner of all the nodes in the set.
+   */
+  template<typename T> void delete_nodes(const set<T *> &nodes, const NodeOwner *owner);
 
  protected:
   /* Check if some heavy data worth logging was updated.
@@ -363,17 +399,78 @@ class Scene {
 
   void free_memory(bool final);
 
+  bool kernels_loaded;
+  DeviceRequestedFeatures loaded_kernel_features;
+
+  bool load_kernels(Progress &progress, bool lock_scene = true);
+
+  /* ** Split kernel routines ** */
+
+  DeviceRequestedFeatures get_requested_device_features();
+
+  /* Maximum number of closure during session lifetime. */
+  int max_closure_global;
+
+  /* Get maximum number of closures to be used in kernel. */
+  int get_max_closure_count();
+
   template<typename T> void delete_node_impl(T *node)
   {
     delete node;
   }
 };
 
-#if 0
+template<> Light *Scene::create_node<Light>();
+
+template<> Mesh *Scene::create_node<Mesh>();
+
+template<> Object *Scene::create_node<Object>();
+
+template<> Hair *Scene::create_node<Hair>();
+
+template<> Volume *Scene::create_node<Volume>();
+
 template<> PointCloud *Scene::create_node<PointCloud>();
 
+template<> ParticleSystem *Scene::create_node<ParticleSystem>();
+
+template<> Shader *Scene::create_node<Shader>();
+
+template<> AlembicProcedural *Scene::create_node<AlembicProcedural>();
+
+template<> void Scene::delete_node_impl(Light *node);
+
+template<> void Scene::delete_node_impl(Mesh *node);
+
+template<> void Scene::delete_node_impl(Volume *node);
+
 template<> void Scene::delete_node_impl(PointCloud *node);
-#endif
+
+template<> void Scene::delete_node_impl(Hair *node);
+
+template<> void Scene::delete_node_impl(Geometry *node);
+
+template<> void Scene::delete_node_impl(Object *node);
+
+template<> void Scene::delete_node_impl(ParticleSystem *node);
+
+template<> void Scene::delete_node_impl(Shader *node);
+
+template<> void Scene::delete_node_impl(Procedural *node);
+
+template<> void Scene::delete_node_impl(AlembicProcedural *node);
+
+template<> void Scene::delete_nodes(const set<Light *> &nodes, const NodeOwner *owner);
+
+template<> void Scene::delete_nodes(const set<Geometry *> &nodes, const NodeOwner *owner);
+
+template<> void Scene::delete_nodes(const set<Object *> &nodes, const NodeOwner *owner);
+
+template<> void Scene::delete_nodes(const set<ParticleSystem *> &nodes, const NodeOwner *owner);
+
+template<> void Scene::delete_nodes(const set<Shader *> &nodes, const NodeOwner *owner);
+
+template<> void Scene::delete_nodes(const set<Procedural *> &nodes, const NodeOwner *owner);
 
 CCL_NAMESPACE_END
 

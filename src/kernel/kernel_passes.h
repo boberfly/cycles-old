@@ -59,9 +59,9 @@ ccl_device_inline void kernel_update_denoising_features(KernelGlobals *kg,
     return;
   }
 
-  float3 normal = make_float3(0.0f, 0.0f, 0.0f);
-  float3 diffuse_albedo = make_float3(0.0f, 0.0f, 0.0f);
-  float3 specular_albedo = make_float3(0.0f, 0.0f, 0.0f);
+  float3 normal = zero_float3();
+  float3 diffuse_albedo = zero_float3();
+  float3 specular_albedo = zero_float3();
   float sum_weight = 0.0f, sum_nonspecular_weight = 0.0f;
 
   for (int i = 0; i < sd->num_closure; i++) {
@@ -326,9 +326,10 @@ ccl_device_inline void kernel_write_light_passes(KernelGlobals *kg,
     kernel_write_pass_float3(buffer + kernel_data.film.pass_transmission_color,
                              L->color_transmission);
   if (light_flag & PASSMASK(SHADOW)) {
-    float4 shadow = L->shadow;
-    shadow.w = kernel_data.film.pass_shadow_scale;
-    kernel_write_pass_float4(buffer + kernel_data.film.pass_shadow, shadow);
+    float3 shadow = L->shadow;
+    kernel_write_pass_float4(
+        buffer + kernel_data.film.pass_shadow,
+        make_float4(shadow.x, shadow.y, shadow.z, kernel_data.film.pass_shadow_scale));
   }
   if (light_flag & PASSMASK(MIST))
     kernel_write_pass_float(buffer + kernel_data.film.pass_mist, 1.0f - L->mist);

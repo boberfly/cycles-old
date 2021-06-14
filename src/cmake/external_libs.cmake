@@ -31,7 +31,11 @@ endmacro()
 
 if(CYCLES_STANDALONE_REPOSITORY)
   if(APPLE)
-    set(_cycles_lib_dir "${CMAKE_SOURCE_DIR}/../lib/darwin")
+    if("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "x86_64")
+      set(_cycles_lib_dir "${CMAKE_SOURCE_DIR}/../lib/darwin")
+    else()
+      set(_cycles_lib_dir "${CMAKE_SOURCE_DIR}/../lib/darwin_arm64")
+    endif()
   elseif(WIN32)
     if(CMAKE_CL_64)
       set(_cycles_lib_dir "${CMAKE_SOURCE_DIR}/../lib/win64_vc15")
@@ -60,6 +64,10 @@ if(CYCLES_STANDALONE_REPOSITORY)
       endif()
     endif()
 
+    if(DEFINED _cycles_lib_dir)
+      message(STATUS "Using precompiled libraries at ${_cycles_lib_dir}")
+    endif()
+
     # Avoid namespace pollustion.
     unset(LIBDIR_NATIVE_ABI)
     unset(LIBDIR_CENTOS7_ABI)
@@ -72,6 +80,7 @@ if(CYCLES_STANDALONE_REPOSITORY)
     _set_default(GLEW_ROOT_DIR "${_cycles_lib_dir}/glew")
     _set_default(JPEG_ROOT "${_cycles_lib_dir}/jpeg")
     _set_default(LLVM_ROOT_DIR "${_cycles_lib_dir}/llvm")
+    _set_default(CLANG_ROOT_DIR "${_cycles_lib_dir}/llvm")
     _set_default(OPENCOLORIO_ROOT_DIR "${_cycles_lib_dir}/opencolorio")
     _set_default(OPENEXR_ROOT_DIR "${_cycles_lib_dir}/openexr")
     _set_default(OPENIMAGEDENOISE_ROOT_DIR "${_cycles_lib_dir}/openimagedenoise")
@@ -81,6 +90,7 @@ if(CYCLES_STANDALONE_REPOSITORY)
     _set_default(OPENVDB_ROOT_DIR "${_cycles_lib_dir}/openvdb")
     _set_default(OSL_ROOT_DIR "${_cycles_lib_dir}/osl")
     _set_default(PNG_ROOT "${_cycles_lib_dir}/png")
+    _set_default(PUGIXML_ROOT_DIR "${_cycles_lib_dir}/pugixml")
     _set_default(TBB_ROOT_DIR "${_cycles_lib_dir}/tbb")
     _set_default(TIFF_ROOT "${_cycles_lib_dir}/tiff")
     _set_default(ZLIB_ROOT "${_cycles_lib_dir}/zlib")
@@ -117,21 +127,22 @@ endif()
 if(WITH_CYCLES_STANDALONE AND WITH_CYCLES_STANDALONE_GUI)
   if(MSVC AND EXISTS ${_cycles_lib_dir})
     add_definitions(-DFREEGLUT_STATIC -DFREEGLUT_LIB_PRAGMAS=0)
+    set(GLUT_FOUND ON)
     set(GLUT_LIBRARIES "${_cycles_lib_dir}/opengl/lib/freeglut_static.lib")
     set(GLUT_INCLUDE_DIR "${_cycles_lib_dir}/opengl/include")
   else()
     find_package(GLUT)
-
-    if(NOT GLUT_FOUND)
-      set(WITH_CYCLES_STANDALONE_GUI OFF)
-      message(STATUS "GLUT not found, disabling Cycles standalone GUI")
-    endif()
   endif()
 
-  include_directories(
-    SYSTEM
-    ${GLUT_INCLUDE_DIR}
-  )
+  if(GLUT_FOUND)
+    include_directories(
+      SYSTEM
+      ${GLUT_INCLUDE_DIR}
+    )
+  else()
+    set(WITH_CYCLES_STANDALONE_GUI OFF)
+    message(WARNING "GLUT not found, disabling WITH_CYCLES_STANDALONE_GUI")
+  endif()
 endif()
 
 ###########################################################################
@@ -230,7 +241,9 @@ if(CYCLES_STANDALONE_REPOSITORY)
   endif()
 
   find_package(OpenImageIO REQUIRED)
-  if(OPENIMAGEIO_PUGIXML_FOUND)
+  # For our lib directory, always link with separate PugiXML, the auto
+  # detection fails due to outdated PugiXML headers in the OIIO folder.
+  if(OPENIMAGEIO_PUGIXML_FOUND AND NOT EXISTS ${_cycles_lib_dir})
     set(PUGIXML_INCLUDE_DIR "${OPENIMAGEIO_INCLUDE_DIR/OpenImageIO}")
     set(PUGIXML_LIBRARIES "")
   else()
@@ -367,9 +380,9 @@ if(CYCLES_STANDALONE_REPOSITORY)
       set(Boost_USE_STATIC_LIBS ON)
     else()
       set(BOOST_LIBRARYDIR ${_cycles_lib_dir}/boost/lib)
-      set(Boost_NO_BOOST_CMAKE ON)
-      set(Boost_NO_SYSTEM_PATHS ON)
     endif()
+    set(Boost_NO_BOOST_CMAKE ON)
+    set(Boost_NO_SYSTEM_PATHS ON)
   endif()
 
   set(__boost_packages filesystem regex system thread date_time)
@@ -469,7 +482,7 @@ if(WITH_CYCLES_OPENSUBDIV)
         optimized ${OPENSUBDIV_ROOT_DIR}/lib/osdGPU.lib
         debug ${OPENSUBDIV_ROOT_DIR}/lib/osdCPU_d.lib
         debug ${OPENSUBDIV_ROOT_DIR}/lib/osdGPU_d.lib
-     )
+      )
     endif()
   endif()
 endif()
@@ -522,7 +535,6 @@ if(WITH_CYCLES_OPENIMAGEDENOISE)
         debug ${OPENIMAGEDENOISE_ROOT_DIR}/lib/common_d.lib
         debug ${OPENIMAGEDENOISE_ROOT_DIR}/lib/dnnl_d.lib)
     endif()
-
   endif()
 endif()
 

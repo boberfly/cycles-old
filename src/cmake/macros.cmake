@@ -97,7 +97,12 @@ endmacro()
 
 # Cycles library dependencies common to all executables
 
-macro(cycles_link_directories)
+function(cycles_link_directories)
+  if(APPLE)
+    # APPLE plaform uses full paths for linking libraries, and avoids link_directories.
+    return()
+  endif()
+
   if(WITH_OPENCOLORIO)
     link_directories(${OPENCOLORIO_LIBPATH})
   endif()
@@ -121,14 +126,14 @@ macro(cycles_link_directories)
     ${OPENEXR_LIBPATH}
     ${OPENJPEG_LIBPATH}
   )
-endmacro()
+endfunction()
 
 macro(cycles_target_link_libraries target)
   if(WITH_CYCLES_LOGGING)
     target_link_libraries(${target} ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES})
   endif()
   if(WITH_CYCLES_OSL)
-    target_link_libraries(${target} ${OSL_LIBRARIES} ${LLVM_LIBRARY})
+    target_link_libraries(${target} ${OSL_LIBRARIES} ${LLVM_LIBRARY} ${CLANG_LIBRARIES})
   endif()
   if(WITH_CYCLES_EMBREE)
     target_link_libraries(${target} ${EMBREE_LIBRARIES})
@@ -138,12 +143,18 @@ macro(cycles_target_link_libraries target)
   endif()
   if(WITH_OPENCOLORIO)
     target_link_libraries(${target} ${OPENCOLORIO_LIBRARIES})
+    if(APPLE)
+      target_link_libraries(${target} "-framework IOKit")
+    endif()
   endif()
   if(WITH_OPENVDB)
     target_link_libraries(${target} ${OPENVDB_LIBRARIES} ${BLOSC_LIBRARIES})
   endif()
   if(WITH_OPENIMAGEDENOISE)
     target_link_libraries(${target} ${OPENIMAGEDENOISE_LIBRARIES})
+    if(APPLE AND "${CMAKE_OSX_ARCHITECTURES}" STREQUAL "arm64")
+      target_link_libraries(${target} "-framework Accelerate")
+    endif()
   endif()
   target_link_libraries(
     ${target}

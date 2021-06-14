@@ -15,6 +15,8 @@
  */
 
 #ifdef WITH_NANOVDB
+#  define NDEBUG /* Disable "assert" in device code */
+#  define NANOVDB_USE_INTRINSICS
 #  include "nanovdb/NanoVDB.h"
 #  include "nanovdb/util/SampleFromVoxels.h"
 #endif
@@ -66,8 +68,8 @@ ccl_device T kernel_tex_image_interp_bicubic(const TextureInfo &info, float x, f
   x = (x * info.width) - 0.5f;
   y = (y * info.height) - 0.5f;
 
-  float px = floor(x);
-  float py = floor(y);
+  float px = floorf(x);
+  float py = floorf(y);
   float fx = x - px;
   float fy = y - py;
 
@@ -93,9 +95,9 @@ ccl_device T kernel_tex_image_interp_tricubic(const TextureInfo &info, float x, 
   y = (y * info.height) - 0.5f;
   z = (z * info.depth) - 0.5f;
 
-  float px = floor(x);
-  float py = floor(y);
-  float pz = floor(z);
+  float px = floorf(x);
+  float py = floorf(y);
+  float pz = floorf(z);
   float fx = x - px;
   float fy = y - py;
   float fz = z - pz;
@@ -125,9 +127,9 @@ ccl_device T kernel_tex_image_interp_tricubic(const TextureInfo &info, float x, 
 template<typename T, typename S>
 ccl_device T kernel_tex_image_interp_tricubic_nanovdb(S &s, float x, float y, float z)
 {
-  float px = floor(x);
-  float py = floor(y);
-  float pz = floor(z);
+  float px = floorf(x);
+  float py = floorf(y);
+  float pz = floorf(z);
   float fx = x - px;
   float fy = y - py;
   float fz = z - pz;

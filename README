@@ -1,80 +1,74 @@
-Cycles Render Engine
-====================
+Cycles Renderer
+===============
 
-Cycles is a ray tracing renderer focused on interactivity and ease of use, while
-still supporting many production features.
+Cycles is a path tracing renderer focused on interactivity and ease of use, while supporting many production features.
 
-= Building =
-------------
+https://www.cycles-renderer.org
 
-== Requirements ==
--------------------
+Quick Build
+-----------
 
-Crucial dependencies:
-- OpenGL
-- GLEW
-- Boost (version at least 1.48).
-- OpenImageIO (plus all the libraries which OIIO depends on).
-- PugiXML unless OpenImageIO is compiled with embedded version of this library.
+Ensure the following software is installed and available in the PATH:
+- Git
+- Subversion
+- Python 3
+- CMake
 
-Optional dependencies:
-- OpenShadingLanguage
+Quick build setup on Windows, macOS and Linux is as follows:
 
-== Precompiled libraries ==
----------------------------
+  git clone git://git.blender.org/cycles.git
 
-It is possible to use precompiled libraries for OSX and Windows The libraries could
-be checked out from Blender's library repository:
+  cd cycles
+  make update
+  make
 
+This will download the Cycles source code, download precompiled libraries, configure CMake, and build.
+
+The resulting binary will be in:
+
+  cycles/build/bin
+
+Build Details
+-------------
+
+Cycles uses the CMake build system. As an alternative to the "make" wrapper, CMake can be manually configured.
+
+See the CMake configuration to enable and disable various features.
+
+The precompiled libraries are shared with Blender, and will be automatically downlaod from the Blender repository with "make update" from:
   https://svn.blender.org/svnroot/bf-blender/trunk/lib/
 
-Currently the full checkout of platform libraries is required. This means, i.e.,
-to use OSX libraries this folder is to be checked out:
+The precompiled libraries are expected to be in a lib/<platform> folder next to the cycles/ source folder.
 
-  https://svn.blender.org/svnroot/bf-blender/trunk/lib/darwin-9.x.universal/
-
-Build system expects precompiled libraries to be stored in the lib/ folder next
-to folder with Cycles sources.
-
-== Compilation Options ==
--------------------------
-
-- WITH_CPU_SSE                  // Enable SIMD instruction if they're detected on
-                                // the host machine.
-- WITH_CYCLES_STANDALONE_GUI    // Build standalone app with GUI.
-- WITH_CYCLES_OSL               // Build with OpenShadingLanguage support.
-- WITH_CYCLES_LOGGING           // Build with logging support.
-- WITH_CYCLES_DEBUG             // Build with extra debug capabilities.
-
-== Compilation ==
-------------------
-
-Once all the requirements are met, either invoke `cmake` with all desired
-parameters from a build folder, or simply type `make` in the root directory of
-Cycles repository.
-
-== Extra Dependencies ==
-------------------------
-
-Depending on how the dependencies were compiles it is possible that manual tweaks
-to the linker are required.
-
-For example if OpenImageIO is compiled as a static library it'll be required to
-pass all the OIIO dependencies to the linker using  CMAKE_EXE_LINKER_FLAGS CMake
-variable.
-
-Dealing with such kind of dependencies is not really possible automatically, so
-we can't reduce entropy of a hassle here.
-
-It is possible to pass CMake configuration arguments to GNU Makefile, i.e.:
-
-  make BUILD_CMAKE_ARGS="-DBOOST_ROOT=/opt/lib/boost"
-
-= Examples =
+Dependencies
 ------------
 
-The repository contains example xml scenes which could be used to test Cycles
-render engine.
+The following library dependencies are required for building a feature complete Cycles version. These are all included as part of the precompiled libraries.
+
+Required:
+- OpenGL
+- GLEW
+- GLUT
+- Boost
+- OpenImageIO
+- TBB
+
+Optional:
+- Embree
+- OpenColorIO
+- OpenVDB / NanoVDB
+- OpenShadingLanguage
+- OpenImageDenoise
+
+For GPU rendering support on NVIDIA cards, these need to be downloaded and installed from the NVIDIA website.
+
+- CUDA Toolkit 11 or newer
+- OptiX 7.1 SDK
+
+Examples
+--------
+
+The repository contains example xml scenes which could be used for testing.
 
 Example usage:
 
@@ -88,20 +82,9 @@ For the OSL scene you need to enable the OSL shading system:
 
   ./cycles --shadingsys osl scene_osl_stripes.xml
 
-= Known TODOs =
----------------
+Contact
+-------
 
-- Installation target is not tested and would need more work.
-- Compiled .oso files are not put to the final location, so manual copy is
-  required for now.
+For help building or running Cycles, see the channels listed here:
 
-= Problems =
-------------
-
-If you encounter problems, please mail the blender's mailing list bf-cycles:
-
-  http://lists.blender.org/mailman/listinfo/bf-cycles
-
-or ask for help on
-
-  irc://irc.freenode.net/blendercoders
+https://www.cycles-renderer.org/development/

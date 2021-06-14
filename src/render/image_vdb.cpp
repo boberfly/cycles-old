@@ -48,7 +48,6 @@ bool VDBImageLoader::load_metadata(const ImageDeviceFeatures &features, ImageMet
 
   /* Set dimensions. */
   openvdb::Coord dim = bbox.dim();
-  openvdb::Coord min = bbox.min();
   metadata.width = dim.x();
   metadata.height = dim.y();
   metadata.depth = dim.z();
@@ -177,12 +176,17 @@ bool VDBImageLoader::load_metadata(const ImageDeviceFeatures &features, ImageMet
                        transform_scale(dim.x(), dim.y(), dim.z());
   }
 
+
   metadata.transform_3d = transform_inverse(index_to_object * texture_to_index);
   metadata.use_transform_3d = true;
 
+#  ifndef WITH_NANOVDB
+  (void)features;
+#  endif
   return true;
 #else
   (void)metadata;
+  (void)features;
   return false;
 #endif
 }

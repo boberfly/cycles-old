@@ -21,8 +21,6 @@
 
 CCL_NAMESPACE_BEGIN
 
-struct PackedBVH;
-
 enum PointCloudPointStyle {
   POINT_CLOUD_POINT_SPHERE,
   POINT_CLOUD_POINT_DISC,
@@ -60,22 +58,17 @@ class PointCloud : public Geometry {
                           size_t p) const;
   };
 
-  PointCloudPointStyle point_style;
-  array<float3> points;
-  array<float> radius;
-  array<int> shader;
-
-  /* NODE_SOCKET_API(array<float3>, points);
-   * NODE_SOCKET_API(array<float>, radius);
-   * NODE_SOCKET_API(array<int>, shader); */
+  NODE_SOCKET_API(PointCloudPointStyle, point_style);
+  NODE_SOCKET_API(array<float3>, points);
+  NODE_SOCKET_API(array<float>, radius);
+  NODE_SOCKET_API(array<int>, shader);
 
   /* Constructor/Destructor */
   PointCloud();
   ~PointCloud();
 
   /* Geometry */
-  void clear(const bool preserver_shaders = false);
-  /* override; port: not virtual */
+  void clear(const bool preserver_shaders = false) override;
 
   void resize(int numpoints);
   void reserve(int numpoints);
@@ -108,9 +101,7 @@ class PointCloud : public Geometry {
 
   /* BVH */
   void pack(Scene *scene, float4 *packed_points, uint *packed_shader);
-#if 0
-  void pack_primitives(PackedBVH &pack, int object, uint visibility) override;
-#endif
+  void pack_primitives(PackedBVH *pack, int object, uint visibility, PackFlags pack_flag) override;
 };
 
 CCL_NAMESPACE_END

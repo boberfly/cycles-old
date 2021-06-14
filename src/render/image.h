@@ -182,7 +182,7 @@ class ImageManager {
   ImageHandle add_image(const string &filename, const ImageParams &params);
   ImageHandle add_image(const string &filename,
                         const ImageParams &params,
-                        const vector<int> &tiles);
+                        const array<int> &tiles);
   ImageHandle add_image(ImageLoader *loader, const ImageParams &params, const bool builtin = true);
 
   void device_update(Device *device, Scene *scene, Progress &progress);
@@ -199,7 +199,9 @@ class ImageManager {
 
   void collect_statistics(RenderStats *stats);
 
-  bool need_update;
+  void tag_update();
+
+  bool need_update() const;
 
   struct Image {
     ImageParams params;
@@ -219,6 +221,8 @@ class ImageManager {
   };
 
  private:
+  bool need_update_;
+
   ImageDeviceFeatures features;
 
   thread_mutex device_mutex;
