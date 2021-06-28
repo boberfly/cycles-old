@@ -28,6 +28,7 @@ class MD5Hash;
 struct Node;
 struct NodeType;
 struct Transform;
+class Geometry;
 
 /* Note: in the following macros we use "type const &" instead of "const type &"
  * to avoid issues when pasting a pointer type. */
@@ -110,6 +111,7 @@ struct Node {
   void set(const SocketType &input, ustring value);
   void set(const SocketType &input, const Transform &value);
   void set(const SocketType &input, Node *value);
+  void set(const SocketType &input, Geometry *value);
 
   /* set array values. the memory from the input array will taken over
    * by the node and the input array will be empty after return */
