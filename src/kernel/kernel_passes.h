@@ -170,6 +170,29 @@ ccl_device_inline size_t kernel_write_id_slots_gpu(ccl_global float *buffer,
   return depth * 2;
 }
 
+ccl_device_inline void kernel_write_deep_value(KernelGlobals *kg,
+                                               float3 value,
+                                               float3 alpha,
+                                               float3 N,
+                                               float z,
+                                               int object,
+                                               int prim)
+{
+#ifdef __DEEP_PIXELS__
+  if (kg->deep_pixels) {
+    DeepPixel pixel;
+    pixel.depth_near = pixel.depth_far = z;
+    pixel.value = value;
+    pixel.alpha = alpha;
+    pixel.N = N;
+    pixel.object = object;
+    pixel.prim = prim;
+    pixel.sample_count = 1;
+    kg->deep_pixels->emplace_back(pixel);
+  }
+#endif /* __DEEP_PIXELS__ */
+}
+
 ccl_device_inline void kernel_write_data_passes(KernelGlobals *kg,
                                                 ccl_global float *buffer,
                                                 PathRadiance *L,

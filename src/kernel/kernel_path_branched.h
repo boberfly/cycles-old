@@ -397,11 +397,23 @@ ccl_device void kernel_branched_path_integrate(KernelGlobals *kg,
                                                int sample,
                                                Ray ray,
                                                ccl_global float *buffer,
-                                               PathRadiance *L)
+                                               PathRadiance *L_out)
 {
   /* initialize */
   float3 throughput = one_float3();
 
+#ifdef __DEEP_PIXELS__
+  float3 total_throughput = one_float3();
+  PathRadiance L_sample;
+  PathRadiance *L = &L_sample;
+  if (kernel_data.film.pass_flag & PASSMASK(DEEP)) {
+    path_radiance_init(kg, L_out);
+  } else {
+    L = L_out;
+  }
+#else /* __DEEP_PIXELS__ */
+  PathRadiance *L = L_out;
+#endif /* __DEEP_PIXELS__ */
   path_radiance_init(kg, L);
 
   /* shader data memory used for both volumes and surfaces, saves stack space */
@@ -432,6 +444,11 @@ ccl_device void kernel_branched_path_integrate(KernelGlobals *kg,
     /* Shade background. */
     if (!hit) {
       kernel_path_background(kg, &state, &ray, throughput, &sd, buffer, L);
+#ifdef __DEEP_PIXELS__
+      if (kernel_data.film.pass_flag & PASSMASK(DEEP)) {
+        L_out->transparent = L->transparent;
+      }
+#endif /* __DEEP_PIXELS__ */
       break;
     }
 
@@ -509,8 +526,31 @@ ccl_device void kernel_branched_path_integrate(KernelGlobals *kg,
       /* continue in case of transparency */
       throughput *= shader_bsdf_transparency(kg, &sd);
 
+#    ifdef __DEEP_PIXELS__
+      if (kernel_data.film.pass_flag & PASSMASK(DEEP)) {
+        if (hit) {
+          path_radiance_scale(L, total_throughput);
+        }
+        path_radiance_accum_sample(L_out, L);
+        total_throughput *= throughput;
+        float alpha = 1.0f;
+        float3 sum = path_radiance_clamp_and_sum(kg, L, &alpha);
+        float3 alpha3 = hit ? make_float3(1.0f, 1.0f, 1.0f) - shader_bsdf_transparency(kg, &sd) : make_float3(1.0f, 1.0f, 1.0f);
+        float depth = hit ? camera_distance(kg, sd.P) : kernel_data.cam.cliplength;
+        kernel_write_deep_value(kg, sum, alpha3, sd.Ng, depth, sd.object, sd.prim);
+        path_radiance_init(kg, L);
+
+        if (is_zero(total_throughput))
+          break;
+
+      } else {
+        if (is_zero(throughput))
+          break;
+      }
+#    else /* __DEEP_PIXELS */
       if (is_zero(throughput))
         break;
+#    endif /* __DEEP_PIXELS__ */
 
       /* Update Path State */
       path_state_next(kg, &state, LABEL_TRANSPARENT);

@@ -63,6 +63,7 @@ static NodeEnum *get_pass_type_enum()
   pass_type_enum.insert("aov_value", PASS_AOV_VALUE);
   pass_type_enum.insert("adaptive_aux_buffer", PASS_ADAPTIVE_AUX_BUFFER);
   pass_type_enum.insert("sample_count", PASS_SAMPLE_COUNT);
+  pass_type_enum.insert("deep", PASS_DEEP);
   pass_type_enum.insert("mist", PASS_MIST);
   pass_type_enum.insert("emission", PASS_EMISSION);
   pass_type_enum.insert("background", PASS_BACKGROUND);
@@ -268,6 +269,11 @@ void Pass::add(PassType type, vector<Pass> &passes, const char *name, bool filte
       pass.exposure = false;
       pass.filter = false;
       break;
+    case PASS_DEEP:
+      /* Managed by DeepPixel and OIIO DeepData writing tiles */
+      pass.components = 0;
+      break;
+      
     default:
       assert(false);
       break;
@@ -408,6 +414,14 @@ NODE_DEFINE(Film)
 
   SOCKET_INT(cryptomatte_depth, "Cryptomatte Depth", 0);
 
+  static NodeEnum deep_passes_enum;
+  deep_passes_enum.insert("alpha", DEEP_ALPHA);
+  deep_passes_enum.insert("color_alpha", DEEP_COLOR_ALPHA);
+  deep_passes_enum.insert("color_rgb_opacity", DEEP_COLOR_RGB_OPACITY);
+  SOCKET_ENUM(deep_passes, "Deep Passes", deep_passes_enum, DEEP_ALPHA);
+
+  SOCKET_FLOAT(depth_tolerance, "Depth Tolerance", 0.005f);
+
   return type;
 }
 
@@ -417,6 +431,7 @@ Film::Film() : Node(get_node_type())
   filter_table_offset = TABLE_OFFSET_INVALID;
   cryptomatte_passes = CRYPT_NONE;
   display_pass = PASS_COMBINED;
+  deep_passes = DEEP_ALPHA;
 }
 
 Film::~Film()
@@ -621,6 +636,8 @@ void Film::device_update(Device *device, DeviceScene *dscene, Scene *scene)
                                      kfilm->pass_stride;
         num_lightgroups++;
         break;
+      case PASS_DEEP:
+        break;
       default:
         assert(false);
         break;
@@ -685,6 +702,8 @@ void Film::device_update(Device *device, DeviceScene *dscene, Scene *scene)
 
   kfilm->cryptomatte_passes = cryptomatte_passes;
   kfilm->cryptomatte_depth = cryptomatte_depth;
+
+  kfilm->deep_passes = deep_passes;
 
   pass_stride = kfilm->pass_stride;
   denoising_data_offset = kfilm->pass_denoising_data;

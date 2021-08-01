@@ -978,12 +978,15 @@ class CPUDevice : public Device {
         break;
       }
 
+      int deep_index = 0;
       if (tile.task == RenderTile::PATH_TRACE) {
         for (int y = tile.y; y < tile.y + tile.h; y++) {
           for (int x = tile.x; x < tile.x + tile.w; x++) {
             if (use_coverage) {
               coverage.init_pixel(x, y);
             }
+            kg->deep_pixels = &tile.deep_buffer[deep_index];
+            deep_index++;
             path_trace_kernel()(kg, render_buffer, sample, x, y, tile.offset, tile.stride);
           }
         }
@@ -1309,6 +1312,8 @@ class CPUDevice : public Device {
     RenderTile tile;
     while (task.acquire_tile(this, tile, tile_types)) {
       if (tile.task == RenderTile::PATH_TRACE) {
+        tile.deep_buffer.clear();
+        tile.deep_buffer.resize(tile.w * tile.h);
         if (use_split_kernel) {
           device_only_memory<uchar> void_buffer(this, "void_buffer");
           split_kernel->path_trace(task, tile, kgbuffer, void_buffer);

@@ -38,6 +38,7 @@ CCL_NAMESPACE_BEGIN
  * multiple renders may be running inside the same process. */
 
 #ifdef __KERNEL_CPU__
+struct DeepPixel;
 
 #  ifdef __OSL__
 struct OSLGlobals;
@@ -85,6 +86,11 @@ typedef struct KernelGlobals {
   CoverageMap *coverage_object;
   CoverageMap *coverage_material;
   CoverageMap *coverage_asset;
+
+#  ifdef __DEEP_PIXELS__
+  /* Deep Pixels. */
+  vector<DeepPixel> *deep_pixels;
+#  endif /* __DEEP_PIXELS__ */
 
   /* split kernel */
   SplitData split_data;

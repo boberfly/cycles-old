@@ -135,6 +135,7 @@ CCL_NAMESPACE_BEGIN
 #  define __VOLUME_RECORD_ALL__
 #  define __DNDU__
 #  define __OIIO__
+#  define __DEEP_PIXELS__
 #endif /* __KERNEL_CPU__ */
 
 #ifdef __KERNEL_CUDA__
@@ -382,6 +383,7 @@ typedef enum PassType {
   PASS_AOV_VALUE,
   PASS_ADAPTIVE_AUX_BUFFER,
   PASS_SAMPLE_COUNT,
+  PASS_DEEP,
   PASS_CATEGORY_MAIN_END = 31,
 
   PASS_MIST = 32,
@@ -419,6 +421,12 @@ typedef enum CryptomatteType {
   CRYPT_ASSET = (1 << 2),
   CRYPT_ACCURATE = (1 << 3),
 } CryptomatteType;
+
+typedef enum DeepType {
+  DEEP_ALPHA = 0,
+  DEEP_COLOR_ALPHA = 1,
+  DEEP_COLOR_RGB_OPACITY = 2,
+} DeepType;
 
 typedef enum DenoisingPassOffsets {
   DENOISING_PASS_NORMAL = 0,
@@ -589,6 +597,16 @@ typedef struct BsdfEval {
   float3 sum_no_mis;
 #endif
 } BsdfEval;
+
+typedef struct DeepPixel {
+  float3 value;
+  float3 alpha;
+  float3 N;
+  float depth_near, depth_far;
+  int object;
+  int prim;
+  int sample_count;
+} DeepPixel;
 
 /* Shader Flag */
 
@@ -1306,7 +1324,8 @@ typedef struct KernelFilm {
   int pass_aov_value_num;
   uint pass_lightgroup;
   uint num_lightgroups;
-  int pad1, pad2, pad3;
+  int deep_passes;
+  int pad1, pad2;
 
   /* XYZ to rendering color space transform. float4 instead of float3 to
    * ensure consistent padding/alignment across devices. */

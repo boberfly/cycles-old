@@ -745,6 +745,28 @@ ccl_device_inline void path_radiance_split_denoising(KernelGlobals *kg,
   *clean = ensure_finite3(*clean);
 }
 
+ccl_device_inline void path_radiance_scale(PathRadiance *L, const float3 scale)
+{
+#ifdef __PASSES__
+  L->direct_diffuse *= scale;
+  L->direct_glossy *= scale;
+  L->direct_transmission *= scale;
+  L->direct_volume *= scale;
+
+  L->indirect_diffuse *= scale;
+  L->indirect_glossy *= scale;
+  L->indirect_transmission *= scale;
+  L->indirect_volume *= scale;
+
+  L->background *= scale;
+  L->ao *= scale;
+  L->shadow *= average(scale);
+  L->mist *= average(scale);
+
+#endif /* __PASSES__ */
+  L->emission *= scale;
+}
+
 ccl_device_inline void path_radiance_accum_sample(PathRadiance *L, PathRadiance *L_sample)
 {
 #ifdef __SPLIT_KERNEL__

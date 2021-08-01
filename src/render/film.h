@@ -82,6 +82,9 @@ class Film : public Node {
 
   NODE_SOCKET_API(bool, use_adaptive_sampling)
 
+  NODE_SOCKET_API(DeepType, deep_passes)
+  NODE_SOCKET_API(float, depth_tolerance)
+
  private:
   int pass_stride;
   int denoising_data_offset;

@@ -191,6 +191,7 @@ class RenderTile {
   StealingState stealing_state;
 
   RenderBuffers *buffers;
+  vector<vector<DeepPixel>> deep_buffer;
 
   RenderTile();
 
