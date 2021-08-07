@@ -438,7 +438,17 @@ if(WITH_CYCLES_STANDALONE)
   target_include_directories(Cycles
           INTERFACE
           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../third_party/atomic>
           $<INSTALL_INTERFACE:include>
+          )
+
+  target_link_libraries(Cycles
+          INTERFACE
+          $<BUILD_INTERFACE:${OPENEXR_HALF_LIBRARY}>
+          $<BUILD_INTERFACE:${OPENIMAGEIO_LIBRARY}>
+          $<BUILD_INTERFACE:${OPENCOLORIO_OPENCOLORIO_LIBRARY}>
+          $<BUILD_INTERFACE:${OPENSUBDIV_OSDGPU_LIBRARY}>
+          $<BUILD_INTERFACE:${OPENSUBDIV_OSDCPU_LIBRARY}>
           )
 
   target_link_libraries(Cycles
@@ -453,6 +463,7 @@ if(WITH_CYCLES_STANDALONE)
           cycles_subd
           cycles_kernel
           cycles_kernel_osl
+          cycles_graph
           )
 
   # create target export and install actual targets
