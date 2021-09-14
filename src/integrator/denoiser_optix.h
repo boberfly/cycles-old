@@ -16,27 +16,16 @@
 
 #pragma once
 
-#include "render/display_driver.h"
-
-#include "util/util_types.h"
+#include "integrator/denoiser_device.h"
 
 CCL_NAMESPACE_BEGIN
 
-/* Device-side graphics interoperability support.
- *
- * Takes care of holding all the handlers needed by the device to implement interoperability with
- * the graphics library. */
-class DeviceGraphicsInterop {
+class OptiXDenoiser : public DeviceDenoiser {
  public:
-  DeviceGraphicsInterop() = default;
-  virtual ~DeviceGraphicsInterop() = default;
+  OptiXDenoiser(Device *path_trace_device, const DenoiseParams &params);
 
-  /* Update this device-side graphics interoperability object with the given destination resource
-   * information. */
-  virtual void set_display_interop(const DisplayDriver::GraphicsInterop &display_interop) = 0;
-
-  virtual device_ptr map() = 0;
-  virtual void unmap() = 0;
+ protected:
+  virtual uint get_device_type_mask() const override;
 };
 
 CCL_NAMESPACE_END
