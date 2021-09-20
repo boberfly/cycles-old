@@ -34,7 +34,6 @@ OIIO_NAMESPACE_USING
 #  include <sys/ioctl.h>
 #  include <sys/sysctl.h>
 #  include <sys/types.h>
-#  include <unistd.h>
 #else
 #  include <sys/ioctl.h>
 #  include <unistd.h>
@@ -401,6 +400,15 @@ size_t system_physical_ram()
   size_t ps = sysconf(_SC_PAGESIZE);
   size_t pn = sysconf(_SC_PHYS_PAGES);
   return ps * pn;
+#endif
+}
+
+uint64_t system_self_process_id()
+{
+#ifdef _WIN32
+  return GetCurrentProcessId();
+#else
+  return getpid();
 #endif
 }
 

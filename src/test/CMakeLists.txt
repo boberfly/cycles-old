@@ -32,6 +32,7 @@ set(INC
 set(ALL_CYCLES_LIBRARIES
   cycles_device
   cycles_kernel
+  cycles_integrator
   cycles_render
   cycles_bvh
   cycles_graph
@@ -39,15 +40,18 @@ set(ALL_CYCLES_LIBRARIES
   cycles_util
   extern_clew
   ${CYCLES_GL_LIBRARIES}
-  ${CYCLES_GLEW_LIBRARIES}
 )
 include_directories(${INC})
 
 cycles_link_directories()
 
 set(SRC
+  integrator_adaptive_sampling_test.cpp
+  integrator_render_scheduler_test.cpp
+  integrator_tile_test.cpp
   render_graph_finalize_test.cpp
   util_aligned_malloc_test.cpp
+  util_math_test.cpp
   util_path_test.cpp
   util_string_test.cpp
   util_task_test.cpp
