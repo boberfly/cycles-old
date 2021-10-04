@@ -1,5 +1,6 @@
 add_subdirectory(clew)
 add_subdirectory(cuew)
+add_subdirectory(hipew)
 add_subdirectory(numaapi)
 add_subdirectory(sky)
 if(UNIX AND NOT APPLE)
