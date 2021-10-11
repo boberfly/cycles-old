@@ -27,6 +27,7 @@
 CCL_NAMESPACE_BEGIN
 
 class MD5Hash;
+class Geometry;
 struct Node;
 struct NodeType;
 struct Transform;
@@ -115,6 +116,7 @@ struct Node {
   void set(const SocketType &input, ustring value);
   void set(const SocketType &input, const Transform &value);
   void set(const SocketType &input, Node *value);
+  void set(const SocketType &input, Geometry *value);
 
   /* Implicitly cast enums and enum classes to integer, which matches an internal way of how
    * enumerator values are stored and accessed in a generic API. */

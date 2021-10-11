@@ -139,6 +139,12 @@ void Node::set(const SocketType &input, Node *value)
   set_if_different(input, value);
 }
 
+void Node::set(const SocketType &input, Geometry *value)
+{
+  assert(input.type == SocketType::NODE);
+  set_if_different(input, value);
+}
+
 /* set array values */
 void Node::set(const SocketType &input, array<bool> &value)
 {
