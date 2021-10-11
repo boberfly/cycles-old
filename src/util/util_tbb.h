@@ -27,6 +27,8 @@
 #include <tbb/task_arena.h>
 #include <tbb/task_group.h>
 
+#define TBB_PREVIEW_GLOBAL_CONTROL 1
+
 #if TBB_INTERFACE_VERSION_MAJOR >= 10
 #  define WITH_TBB_GLOBAL_CONTROL
 #  include <tbb/global_control.h>
