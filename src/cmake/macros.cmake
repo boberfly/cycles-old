@@ -122,7 +122,10 @@ macro(cycles_target_link_libraries target)
     target_link_libraries(${target} ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES})
   endif()
   if(WITH_CYCLES_OSL)
-    target_link_libraries(${target} ${OSL_LIBRARIES} ${LLVM_LIBRARY} ${CLANG_LIBRARIES})
+#@GafferCycles BEGIN
+    #target_link_libraries(${target} ${OSL_LIBRARIES} ${LLVM_LIBRARY} ${CLANG_LIBRARIES})
+    target_link_libraries(${target} ${OSL_LIBRARIES})
+#@GafferCycles END
   endif()
   if(WITH_CYCLES_EMBREE)
     target_link_libraries(${target} ${EMBREE_LIBRARIES})

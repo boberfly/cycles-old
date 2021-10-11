@@ -44,8 +44,10 @@ set(LIB
   ${OSL_LIBRARIES}
   ${OPENIMAGEIO_LIBRARIES}
   ${PUGIXML_LIBRARIES}
-  ${CLANG_LIBRARIES}
-  ${LLVM_LIBRARY}
+#@GafferCycles BEGIN
+  #${CLANG_LIBRARIES}
+  #${LLVM_LIBRARY}
+#@GafferCycles END
 )
 
 # OSL and LLVM are built without RTTI

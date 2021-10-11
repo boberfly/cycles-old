@@ -263,10 +263,12 @@ if(CYCLES_STANDALONE_REPOSITORY)
     set(OPENJPEG_LIBRARY ${_cycles_lib_dir}/openjpeg/lib/openjp2${CMAKE_STATIC_LIBRARY_SUFFIX})
   endif()
 
-  find_package(JPEG REQUIRED)
-  find_package(OpenJPEG REQUIRED)
-  find_package(TIFF REQUIRED)
-  find_package(PNG REQUIRED)
+#@GafferCycles BEGIN
+  #find_package(JPEG REQUIRED)
+  #find_package(OpenJPEG REQUIRED)
+  #find_package(TIFF REQUIRED)
+  #find_package(PNG REQUIRED)
+#@GafferCycles END
 endif()
 
 ###########################################################################
@@ -346,8 +348,10 @@ if(WITH_CYCLES_OSL)
       set(OSL_FOUND ON)
     else()
       find_package(OSL REQUIRED)
-      find_package(LLVM REQUIRED)
-      find_package(Clang REQUIRED)
+      #@GafferCycles BEGIN
+      #find_package(LLVM REQUIRED)
+      #find_package(Clang REQUIRED)
+      #@GafferCycles END
     endif()
   endif()
 endif()
