@@ -86,8 +86,8 @@ enum_use_layer_samples = (
 )
 
 enum_sampling_pattern = (
-    ('SOBOL', "Sobol", "Use Sobol random sampling pattern"),
-    ('PROGRESSIVE_MUTI_JITTER', "Progressive Multi-Jitter", "Use Progressive Multi-Jitter random sampling pattern"),
+    ('SOBOL', "Sobol", "Use Sobol random sampling pattern", 0),
+    ('PROGRESSIVE_MUTI_JITTER', "Progressive Multi-Jitter", "Use Progressive Multi-Jitter random sampling pattern", 1),
 )
 
 enum_volume_sampling = (
@@ -1197,12 +1197,6 @@ class CyclesCurveRenderSettings(bpy.types.PropertyGroup):
 
 class CyclesRenderLayerSettings(bpy.types.PropertyGroup):
 
-    pass_debug_render_time: BoolProperty(
-        name="Debug Render Time",
-        description="Render time in milliseconds per sample and pixel",
-        default=False,
-        update=update_render_passes,
-    )
     pass_debug_sample_count: BoolProperty(
         name="Debug Sample Count",
         description="Number of samples/camera rays per pixel",

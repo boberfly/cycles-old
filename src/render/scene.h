@@ -74,8 +74,6 @@ class DeviceScene {
   device_vector<int4> bvh_nodes;
   device_vector<int4> bvh_leaf_nodes;
   device_vector<int> object_node;
-  device_vector<uint> prim_tri_index;
-  device_vector<float4> prim_tri_verts;
   device_vector<int> prim_type;
   device_vector<uint> prim_visibility;
   device_vector<int> prim_index;
@@ -83,14 +81,16 @@ class DeviceScene {
   device_vector<float2> prim_time;
 
   /* mesh */
+  device_vector<float4> tri_verts;
   device_vector<uint> tri_shader;
   device_vector<float4> tri_vnormal;
   device_vector<uint4> tri_vindex;
   device_vector<uint> tri_patch;
   device_vector<float2> tri_patch_uv;
 
-  device_vector<float4> curves;
+  device_vector<KernelCurve> curves;
   device_vector<float4> curve_keys;
+  device_vector<KernelCurveSegment> curve_segments;
 
   device_vector<uint> patches;
 
@@ -251,6 +251,10 @@ class Scene : public NodeOwner {
   Scene(const SceneParams &params, Device *device);
   ~Scene();
 
+  /* NOTE: Device can only use used to access invariant data. For example, OSL globals is valid
+   * but anything what is related on kernel and kernel features is not. */
+  void host_update(Device *device, Progress &progress);
+
   void device_update(Device *device, Progress &progress);
 
   bool need_global_attribute(AttributeStandard std);
@@ -343,6 +347,9 @@ class Scene : public NodeOwner {
 
   /* Get maximum number of closures to be used in kernel. */
   int get_max_closure_count();
+
+  /* Get size of a volume stack needed to render this scene.  */
+  int get_volume_stack_size() const;
 
   template<typename T> void delete_node_impl(T *node)
   {

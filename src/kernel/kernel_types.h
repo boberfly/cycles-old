@@ -61,8 +61,6 @@ CCL_NAMESPACE_BEGIN
 #define ID_NONE (0.0f)
 #define PASS_UNUSED (~0)
 
-#define VOLUME_STACK_SIZE 4
-
 /* Kernel features */
 #define __SOBOL__
 #define __DPDU__
@@ -190,7 +188,7 @@ enum SamplingPattern {
   SAMPLING_NUM_PATTERNS,
 };
 
-/* these flags values correspond to raytypes in osl.cpp, so keep them in sync! */
+/* These flags values correspond to `raytypes` in `osl.cpp`, so keep them in sync! */
 
 enum PathRayFlag {
   /* --------------------------------------------------------------------
@@ -263,32 +261,36 @@ enum PathRayFlag {
   PATH_RAY_EMISSION = (1 << 19),
 
   /* Perform subsurface scattering. */
-  PATH_RAY_SUBSURFACE = (1 << 20),
+  PATH_RAY_SUBSURFACE_RANDOM_WALK = (1 << 20),
+  PATH_RAY_SUBSURFACE_DISK = (1 << 21),
+  PATH_RAY_SUBSURFACE_USE_FRESNEL = (1 << 22),
+  PATH_RAY_SUBSURFACE = (PATH_RAY_SUBSURFACE_RANDOM_WALK | PATH_RAY_SUBSURFACE_DISK |
+                         PATH_RAY_SUBSURFACE_USE_FRESNEL),
 
   /* Contribute to denoising features. */
-  PATH_RAY_DENOISING_FEATURES = (1 << 21),
+  PATH_RAY_DENOISING_FEATURES = (1 << 23),
 
   /* Render pass categories. */
-  PATH_RAY_REFLECT_PASS = (1 << 22),
-  PATH_RAY_TRANSMISSION_PASS = (1 << 23),
-  PATH_RAY_VOLUME_PASS = (1 << 24),
+  PATH_RAY_REFLECT_PASS = (1 << 24),
+  PATH_RAY_TRANSMISSION_PASS = (1 << 25),
+  PATH_RAY_VOLUME_PASS = (1 << 26),
   PATH_RAY_ANY_PASS = (PATH_RAY_REFLECT_PASS | PATH_RAY_TRANSMISSION_PASS | PATH_RAY_VOLUME_PASS),
 
   /* Shadow ray is for a light or surface. */
-  PATH_RAY_SHADOW_FOR_LIGHT = (1 << 25),
+  PATH_RAY_SHADOW_FOR_LIGHT = (1 << 27),
 
   /* A shadow catcher object was hit and the path was split into two. */
-  PATH_RAY_SHADOW_CATCHER_HIT = (1 << 26),
+  PATH_RAY_SHADOW_CATCHER_HIT = (1 << 28),
 
   /* A shadow catcher object was hit and this path traces only shadow catchers, writing them into
    * their dedicated pass for later division.
    *
    * NOTE: Is not covered with `PATH_RAY_ANY_PASS` because shadow catcher does special handling
    * which is separate from the light passes. */
-  PATH_RAY_SHADOW_CATCHER_PASS = (1 << 27),
+  PATH_RAY_SHADOW_CATCHER_PASS = (1 << 29),
 
   /* Path is evaluating background for an approximate shadow catcher with non-transparent film. */
-  PATH_RAY_SHADOW_CATCHER_BACKGROUND = (1 << 28),
+  PATH_RAY_SHADOW_CATCHER_BACKGROUND = (1 << 30),
 };
 
 /* Configure ray visibility bits for rays and objects respectively,
@@ -360,7 +362,6 @@ typedef enum PassType {
   PASS_MATERIAL_ID,
   PASS_MOTION,
   PASS_MOTION_WEIGHT,
-  PASS_RENDER_TIME,
   PASS_CRYPTOMATTE,
   PASS_AOV_COLOR,
   PASS_AOV_VALUE,
@@ -607,6 +608,12 @@ typedef struct AttributeDescriptor {
 #  define MAX_CLOSURE 64
 #else
 #  define MAX_CLOSURE __MAX_CLOSURE__
+#endif
+
+#ifndef __MAX_VOLUME_STACK_SIZE__
+#  define MAX_VOLUME_STACK_SIZE 32
+#else
+#  define MAX_VOLUME_STACK_SIZE __MAX_VOLUME_STACK_SIZE__
 #endif
 
 #define MAX_VOLUME_CLOSURE 8
@@ -863,9 +870,6 @@ typedef struct VolumeStack {
 
 /* Struct to gather multiple nearby intersections. */
 typedef struct LocalIntersection {
-  Ray ray;
-  float3 weight[LOCAL_MAX_HITS];
-
   int num_hits;
   struct Intersection hits[LOCAL_MAX_HITS];
   float3 Ng[LOCAL_MAX_HITS];
@@ -1224,7 +1228,7 @@ typedef struct KernelData {
   uint kernel_features;
   uint max_closures;
   uint max_shaders;
-  uint pad;
+  uint volume_stack_size;
 
   KernelCamera cam;
   KernelFilm film;
@@ -1267,9 +1271,24 @@ typedef struct KernelObject {
 
   float ao_distance;
 
-  float pad1, pad2;
+  uint visibility;
+  int primitive_type;
 } KernelObject;
 static_assert_align(KernelObject, 16);
+
+typedef struct KernelCurve {
+  int shader_id;
+  int first_key;
+  int num_keys;
+  int type;
+} KernelCurve;
+static_assert_align(KernelCurve, 16);
+
+typedef struct KernelCurveSegment {
+  int prim;
+  int type;
+} KernelCurveSegment;
+static_assert_align(KernelCurveSegment, 8);
 
 typedef struct KernelSpotLight {
   float radius;

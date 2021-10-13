@@ -85,6 +85,9 @@ ccl_device_noinline int svm_node_closure_bsdf(
   }
 
   float3 N = stack_valid(data_node.x) ? stack_load_float3(stack, data_node.x) : sd->N;
+  if (!(sd->type & PRIMITIVE_ALL_CURVE)) {
+    N = ensure_valid_reflection(sd->Ng, sd->I, N);
+  }
 
   float param1 = (stack_valid(param1_offset)) ? stack_load_float(stack, param1_offset) :
                                                 __uint_as_float(node.z);
@@ -166,6 +169,9 @@ ccl_device_noinline int svm_node_closure_bsdf(
       float3 clearcoat_normal = stack_valid(data_cn_ssr.x) ?
                                     stack_load_float3(stack, data_cn_ssr.x) :
                                     sd->N;
+      if (!(sd->type & PRIMITIVE_ALL_CURVE)) {
+        clearcoat_normal = ensure_valid_reflection(sd->Ng, sd->I, clearcoat_normal);
+      }
       float3 subsurface_radius = stack_valid(data_cn_ssr.y) ?
                                      stack_load_float3(stack, data_cn_ssr.y) :
                                      make_float3(1.0f, 1.0f, 1.0f);
@@ -215,7 +221,7 @@ ccl_device_noinline int svm_node_closure_bsdf(
             bsdf->roughness = roughness;
 
             /* setup bsdf */
-            sd->flag |= bsdf_principled_diffuse_setup(bsdf);
+            sd->flag |= bsdf_principled_diffuse_setup(bsdf, PRINCIPLED_DIFFUSE_FULL);
           }
         }
         else if (subsurface > CLOSURE_WEIGHT_CUTOFF) {
@@ -249,7 +255,7 @@ ccl_device_noinline int svm_node_closure_bsdf(
           bsdf->roughness = roughness;
 
           /* setup bsdf */
-          sd->flag |= bsdf_principled_diffuse_setup(bsdf);
+          sd->flag |= bsdf_principled_diffuse_setup(bsdf, PRINCIPLED_DIFFUSE_FULL);
         }
       }
 #  endif
@@ -879,6 +885,7 @@ ccl_device_noinline int svm_node_closure_bsdf(
 #endif /* __HAIR__ */
 
 #ifdef __SUBSURFACE__
+    case CLOSURE_BSSRDF_BURLEY_ID:
     case CLOSURE_BSSRDF_RANDOM_WALK_ID:
     case CLOSURE_BSSRDF_RANDOM_WALK_FIXED_RADIUS_ID: {
       float3 weight = sd->svm_closure_weight * mix_weight;
