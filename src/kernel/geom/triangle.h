@@ -102,13 +102,34 @@ ccl_device_inline void triangle_vertices_and_normals(KernelGlobals kg,
 /* Interpolate smooth vertex normal from vertices */
 
 ccl_device_inline float3
-triangle_smooth_normal(KernelGlobals kg, float3 Ng, int prim, float u, float v)
+triangle_smooth_normal(KernelGlobals kg, float3 Ng, int obj, int prim, float u, float v)
 {
-  /* load triangle vertices */
-  const uint4 tri_vindex = kernel_tex_fetch(__tri_vindex, prim);
-  float3 n0 = kernel_tex_fetch(__tri_vnormal, tri_vindex.x);
-  float3 n1 = kernel_tex_fetch(__tri_vnormal, tri_vindex.y);
-  float3 n2 = kernel_tex_fetch(__tri_vnormal, tri_vindex.z);
+  float3 n0, n1, n2;
+
+  /* determine if the object has corner normals */
+  int object_flag = kernel_tex_fetch(__object_flag, obj);
+  if (object_flag & SD_OBJECT_HAS_CORNER_NORMALS) {
+    /* base pointer for the geometry's normal buffer - base primitive offset */
+    int prim_offset = kernel_tex_fetch(__object_vnormal_offset, obj);
+    int tri = prim_offset + prim * 3;
+
+    /* load corner normals */
+    n0 = kernel_tex_fetch(__tri_vnormal, tri + 0);
+    n1 = kernel_tex_fetch(__tri_vnormal, tri + 1);
+    n2 = kernel_tex_fetch(__tri_vnormal, tri + 2);
+  }
+  else {
+    /* load triangle vertices */
+    const uint4 tri_vindex = kernel_tex_fetch(__tri_vindex, prim);
+
+    /* base pointer for the geometry's normal buffer - base primitive offset */
+    int vert_offset = kernel_tex_fetch(__object_vnormal_offset, obj);
+
+    /* load vertex normals */
+    n0 = kernel_tex_fetch(__tri_vnormal, vert_offset + tri_vindex.x);
+    n1 = kernel_tex_fetch(__tri_vnormal, vert_offset + tri_vindex.y);
+    n2 = kernel_tex_fetch(__tri_vnormal, vert_offset + tri_vindex.z);
+  }
 
   float3 N = safe_normalize((1.0f - u - v) * n2 + u * n0 + v * n1);
 
@@ -118,11 +139,31 @@ triangle_smooth_normal(KernelGlobals kg, float3 Ng, int prim, float u, float v)
 ccl_device_inline float3 triangle_smooth_normal_unnormalized(
     KernelGlobals kg, ccl_private const ShaderData *sd, float3 Ng, int prim, float u, float v)
 {
-  /* load triangle vertices */
-  const uint4 tri_vindex = kernel_tex_fetch(__tri_vindex, prim);
-  float3 n0 = kernel_tex_fetch(__tri_vnormal, tri_vindex.x);
-  float3 n1 = kernel_tex_fetch(__tri_vnormal, tri_vindex.y);
-  float3 n2 = kernel_tex_fetch(__tri_vnormal, tri_vindex.z);
+  float3 n0, n1, n2;
+
+  /* determine if the object has corner normals */
+  if (sd->object_flag & SD_OBJECT_HAS_CORNER_NORMALS) {
+    /* base pointer for the geometry's normal buffer - base primitive offset */
+    int prim_offset = kernel_tex_fetch(__object_vnormal_offset, sd->object);
+    int tri = prim_offset + prim * 3;
+
+    /* load corner normals */
+    n0 = kernel_tex_fetch(__tri_vnormal, tri + 0);
+    n1 = kernel_tex_fetch(__tri_vnormal, tri + 1);
+    n2 = kernel_tex_fetch(__tri_vnormal, tri + 2);
+  }
+  else {
+    /* load triangle vertices */
+    const uint4 tri_vindex = kernel_tex_fetch(__tri_vindex, prim);
+
+    /* base pointer for the geometry's normal buffer - base primitive offset */
+    int vert_offset = kernel_tex_fetch(__object_vnormal_offset, sd->object);
+
+    /* load vertex normals */
+    n0 = kernel_tex_fetch(__tri_vnormal, vert_offset + tri_vindex.x);
+    n1 = kernel_tex_fetch(__tri_vnormal, vert_offset + tri_vindex.y);
+    n2 = kernel_tex_fetch(__tri_vnormal, vert_offset + tri_vindex.z);
+  }
 
   /* ensure that the normals are in object space */
   if (sd->object_flag & SD_OBJECT_TRANSFORM_APPLIED) {

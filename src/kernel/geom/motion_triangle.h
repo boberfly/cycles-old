@@ -87,6 +87,38 @@ ccl_device_inline void motion_triangle_normals_for_step(KernelGlobals kg,
   }
 }
 
+ccl_device_inline void motion_triangle_corner_normals_for_step(KernelGlobals kg,
+                                                               int obj,
+                                                               int prim,
+                                                               int offset,
+                                                               int numverts,
+                                                               int numsteps,
+                                                               int step,
+                                                               float3 normals[3])
+{
+  if (step == numsteps) {
+    int normal_offset = kernel_tex_fetch(__object_vnormal_offset, obj);
+    int tri = normal_offset + prim * 3;
+
+    /* center step: regular vertex location */
+    normals[0] = kernel_tex_fetch(__tri_vnormal, tri + 0);
+    normals[1] = kernel_tex_fetch(__tri_vnormal, tri + 1);
+    normals[2] = kernel_tex_fetch(__tri_vnormal, tri + 2);
+  }
+  else {
+    /* center step is not stored in this array */
+    if (step > numsteps)
+      step--;
+
+    offset += step * numverts;
+    int tri = offset + prim * 3;
+
+    normals[0] = kernel_tex_fetch(__attributes_float3, tri + 0);
+    normals[1] = kernel_tex_fetch(__attributes_float3, tri + 1);
+    normals[2] = kernel_tex_fetch(__attributes_float3, tri + 2);
+  }
+}
+
 ccl_device_inline void motion_triangle_vertices(
     KernelGlobals kg, int object, int prim, float time, float3 verts[3])
 {
@@ -128,17 +160,35 @@ ccl_device_inline float3 motion_triangle_smooth_normal(
   int step = min((int)(time * maxstep), maxstep - 1);
   float t = time * maxstep - step;
 
-  /* find attribute */
-  int offset = intersection_find_attribute(kg, object, ATTR_STD_MOTION_VERTEX_NORMAL);
-  kernel_assert(offset != ATTR_STD_NOT_FOUND);
-
   /* fetch normals */
   float3 normals[3], next_normals[3];
-  uint4 tri_vindex = kernel_tex_fetch(__tri_vindex, prim);
+  /* determine if the object has corner normals */
+  int object_flag = kernel_tex_fetch(__object_flag, object);
 
-  motion_triangle_normals_for_step(kg, tri_vindex, offset, numverts, numsteps, step, normals);
-  motion_triangle_normals_for_step(
-      kg, tri_vindex, offset, numverts, numsteps, step + 1, next_normals);
+  if (object_flag & SD_OBJECT_HAS_CORNER_NORMALS) {
+    /* find attribute */
+    int offset = intersection_find_attribute(kg, object, ATTR_STD_MOTION_CORNER_NORMAL);
+    kernel_assert(offset != ATTR_STD_NOT_FOUND);
+
+    /* fetch normals */
+    motion_triangle_corner_normals_for_step(
+      kg, object, prim, offset, numverts, numsteps, step, normals);
+    motion_triangle_corner_normals_for_step(
+        kg, object, prim, offset, numverts, numsteps, step + 1, next_normals);
+  }
+  else {
+    /* find attribute */
+    int offset = intersection_find_attribute(kg, object, ATTR_STD_MOTION_VERTEX_NORMAL);
+    kernel_assert(offset != ATTR_STD_NOT_FOUND);
+
+    /* fetch normals */
+    uint4 tri_vindex = kernel_tex_fetch(__tri_vindex, prim);
+
+    motion_triangle_normals_for_step(kg, tri_vindex, offset, numverts, numsteps, step, normals);
+    motion_triangle_normals_for_step(
+        kg, tri_vindex, offset, numverts, numsteps, step + 1, next_normals);
+
+  }
 
   /* interpolate between steps */
   normals[0] = (1.0f - t) * normals[0] + t * next_normals[0];

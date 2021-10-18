@@ -42,6 +42,7 @@ KERNEL_TEX(DecomposedTransform, __camera_motion)
 /* triangles */
 KERNEL_TEX(uint, __tri_shader)
 KERNEL_TEX(packed_float3, __tri_vnormal)
+KERNEL_TEX(uint, __object_vnormal_offset)
 KERNEL_TEX(uint4, __tri_vindex)
 KERNEL_TEX(uint, __tri_patch)
 KERNEL_TEX(float2, __tri_patch_uv)

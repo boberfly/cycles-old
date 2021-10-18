@@ -53,7 +53,12 @@ struct MikkUserData {
                                                                     mesh->attributes;
 
     Attribute *attr_vN = attributes.find(ATTR_STD_VERTEX_NORMAL);
-    vertex_normal = attr_vN->data_float3();
+    Attribute* attr_cN = attributes.find( ccl::ATTR_STD_CORNER_NORMAL );
+    if (attr_cN) {
+      corner_normal = attr_cN->data_float3();
+    } else {
+      vertex_normal = attr_vN->data_float3();
+    }
 
     if (layer_name == NULL) {
       Attribute *attr_orco = attributes.find(ATTR_STD_GENERATED);
@@ -74,6 +79,7 @@ struct MikkUserData {
   const Mesh *mesh;
   int num_faces;
 
+  float3 *corner_normal;
   float3 *vertex_normal;
   float2 *texface;
   float3 *orco;
@@ -181,7 +187,7 @@ static void mikk_get_normal(const SMikkTSpaceContext *context,
   float3 vN;
   if (mesh->get_num_subd_faces()) {
     const Mesh::SubdFace &face = mesh->get_subd_face(face_num);
-    if (face.smooth) {
+    if (userdata->vertex_normal && face.smooth) {
       const int vertex_index = mikk_vertex_index(mesh, face_num, vert_num);
       vN = userdata->vertex_normal[vertex_index];
     }
@@ -190,7 +196,10 @@ static void mikk_get_normal(const SMikkTSpaceContext *context,
     }
   }
   else {
-    if (mesh->get_smooth()[face_num]) {
+    if (userdata->corner_normal) {
+      vN = userdata->corner_normal[face_num * 3 + vert_num];
+    }
+    else if (mesh->get_smooth()[face_num]) {
       const int vertex_index = mikk_vertex_index(mesh, face_num, vert_num);
       vN = userdata->vertex_normal[vertex_index];
     }
