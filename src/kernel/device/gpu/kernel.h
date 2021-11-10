@@ -131,13 +131,14 @@ ccl_gpu_kernel(GPU_KERNEL_BLOCK_NUM_THREADS, GPU_KERNEL_MAX_REGISTERS)
 ccl_gpu_kernel(GPU_KERNEL_BLOCK_NUM_THREADS, GPU_KERNEL_MAX_REGISTERS)
     ccl_gpu_kernel_signature(integrator_intersect_closest,
                              ccl_global const int *path_index_array,
+                             ccl_global float *render_buffer,
                              const int work_size)
 {
   const int global_index = ccl_gpu_global_id_x();
 
   if (global_index < work_size) {
     const int state = (path_index_array) ? path_index_array[global_index] : global_index;
-    ccl_gpu_kernel_call(integrator_intersect_closest(NULL, state));
+    ccl_gpu_kernel_call(integrator_intersect_closest(NULL, state, render_buffer));
   }
 }
 
@@ -891,6 +892,6 @@ ccl_gpu_kernel(GPU_KERNEL_BLOCK_NUM_THREADS, GPU_KERNEL_MAX_REGISTERS)
   const auto can_split_mask = ccl_gpu_ballot(can_split);
   const int lane_id = ccl_gpu_thread_idx_x % ccl_gpu_warp_size;
   if (lane_id == 0) {
-    atomic_fetch_and_add_uint32(num_possible_splits, ccl_gpu_popc(can_split_mask));
+    atomic_fetch_and_add_uint32(num_possible_splits, popcount(can_split_mask));
   }
 }
