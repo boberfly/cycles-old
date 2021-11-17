@@ -571,6 +571,17 @@ if(WITH_CYCLES_HIP_BINARIES AND WITH_CYCLES_DEVICE_HIP)
       -ffast-math
       -o ${CMAKE_CURRENT_BINARY_DIR}/${hip_file})
 
+    if(${experimental})
+      set(hip_flags ${hip_flags} -D __KERNEL_EXPERIMENTAL__)
+      set(name ${name}_experimental)
+    endif()
+
+    if(WITH_NANOVDB)
+      set(hip_flags ${hip_flags}
+        -D WITH_NANOVDB
+        -I "${NANOVDB_INCLUDE_DIR}")
+    endif()
+
     if(WITH_CYCLES_DEBUG)
       set(hip_flags ${hip_flags} -D WITH_CYCLES_DEBUG)
     endif()
