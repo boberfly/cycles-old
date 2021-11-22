@@ -980,7 +980,7 @@ void HIPDevice::tex_alloc(device_texture &mem)
             << string_human_readable_number(mem.memory_size()) << " bytes. ("
             << string_human_readable_size(mem.memory_size()) << ")";
 
-    hip_assert(hipArray3DCreate((hArray*)&array_3d, &desc));
+    hip_assert(hipArray3DCreate((hArray *)&array_3d, &desc));
 
     if (!array_3d) {
       return;
