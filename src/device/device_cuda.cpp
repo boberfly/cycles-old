@@ -127,7 +127,6 @@ void device_cuda_info(vector<DeviceInfo> &devices)
     info.description = string(name);
     info.num = num;
 
-    info.has_half_images = (major >= 3);
     info.has_nanovdb = true;
     info.has_volume_decoupled = false;
     info.has_adaptive_stop_per_sample = false;

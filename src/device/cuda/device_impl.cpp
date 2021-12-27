@@ -24,19 +24,17 @@
 
 #  include "device/cuda/device_impl.h"
 
-#  include "render/buffers.h"
-
-#  include "util/util_debug.h"
-#  include "util/util_foreach.h"
-#  include "util/util_logging.h"
-#  include "util/util_map.h"
-#  include "util/util_md5.h"
-#  include "util/util_path.h"
-#  include "util/util_string.h"
-#  include "util/util_system.h"
-#  include "util/util_time.h"
-#  include "util/util_types.h"
-#  include "util/util_windows.h"
+#  include "util/debug.h"
+#  include "util/foreach.h"
+#  include "util/log.h"
+#  include "util/map.h"
+#  include "util/md5.h"
+#  include "util/path.h"
+#  include "util/string.h"
+#  include "util/system.h"
+#  include "util/time.h"
+#  include "util/types.h"
+#  include "util/windows.h"
 
 CCL_NAMESPACE_BEGIN
 
@@ -46,12 +44,6 @@ bool CUDADevice::have_precompiled_kernels()
 {
   string cubins_path = path_get("lib");
   return path_exists(cubins_path);
-}
-
-bool CUDADevice::show_samples() const
-{
-  /* The CUDADevice only processes one tile at a time, so showing samples is fine. */
-  return true;
 }
 
 BVHLayoutMask CUDADevice::get_bvh_layout_mask() const
@@ -244,6 +236,10 @@ string CUDADevice::compile_kernel_get_common_cflags(const uint kernel_features)
   cflags += " -DWITH_NANOVDB";
 #  endif
 
+#  ifdef WITH_CYCLES_DEBUG
+  cflags += " -DWITH_CYCLES_DEBUG";
+#  endif
+
   return cflags;
 }
 
@@ -380,7 +376,9 @@ string CUDADevice::compile_kernel(const uint kernel_features,
       cubin.c_str(),
       common_cflags.c_str());
 
-  printf("Compiling CUDA kernel ...\n%s\n", command.c_str());
+  printf("Compiling %sCUDA kernel ...\n%s\n",
+         (use_adaptive_compilation()) ? "adaptive " : "",
+         command.c_str());
 
 #  ifdef _WIN32
   command = "call " + command;
@@ -407,13 +405,15 @@ string CUDADevice::compile_kernel(const uint kernel_features,
 
 bool CUDADevice::load_kernels(const uint kernel_features)
 {
-  /* TODO(sergey): Support kernels re-load for CUDA devices.
+  /* TODO(sergey): Support kernels re-load for CUDA devices adaptive compile.
    *
    * Currently re-loading kernel will invalidate memory pointers,
    * causing problems in cuCtxSynchronize.
    */
   if (cuModule) {
-    VLOG(1) << "Skipping kernel reload, not currently supported.";
+    if (use_adaptive_compilation()) {
+      VLOG(1) << "Skipping CUDA kernel reload for adaptive compilation, not currently supported.";
+    }
     return true;
   }
 
@@ -454,7 +454,7 @@ bool CUDADevice::load_kernels(const uint kernel_features)
   return (result == CUDA_SUCCESS);
 }
 
-void CUDADevice::reserve_local_memory(const uint /* kernel_features */)
+void CUDADevice::reserve_local_memory(const uint kernel_features)
 {
   /* Together with CU_CTX_LMEM_RESIZE_TO_MAX, this reserves local memory
    * needed for kernel launches, so that we can reliably figure out when
@@ -468,17 +468,19 @@ void CUDADevice::reserve_local_memory(const uint /* kernel_features */)
 
   {
     /* Use the biggest kernel for estimation. */
-    const DeviceKernel test_kernel = DEVICE_KERNEL_INTEGRATOR_SHADE_SURFACE_RAYTRACE;
+    const DeviceKernel test_kernel = (kernel_features & KERNEL_FEATURE_NODE_RAYTRACE) ?
+                                         DEVICE_KERNEL_INTEGRATOR_SHADE_SURFACE_RAYTRACE :
+                                         DEVICE_KERNEL_INTEGRATOR_SHADE_SURFACE;
 
     /* Launch kernel, using just 1 block appears sufficient to reserve memory for all
      * multiprocessors. It would be good to do this in parallel for the multi GPU case
      * still to make it faster. */
     CUDADeviceQueue queue(this);
 
-    void *d_path_index = nullptr;
-    void *d_render_buffer = nullptr;
+    device_ptr d_path_index = 0;
+    device_ptr d_render_buffer = 0;
     int d_work_size = 0;
-    void *args[] = {&d_path_index, &d_render_buffer, &d_work_size};
+    DeviceKernelArguments args(&d_path_index, &d_render_buffer, &d_work_size);
 
     queue.init_execution();
     queue.enqueue(test_kernel, 1, args);
@@ -676,7 +678,7 @@ CUDADevice::CUDAMem *CUDADevice::generic_alloc(device_memory &mem, size_t pitch_
 
   void *shared_pointer = 0;
 
-  if (mem_alloc_result != CUDA_SUCCESS && can_map_host) {
+  if (mem_alloc_result != CUDA_SUCCESS && can_map_host && mem.type != MEM_DEVICE_ONLY) {
     if (mem.shared_pointer) {
       /* Another device already allocated host memory. */
       mem_alloc_result = CUDA_SUCCESS;
@@ -699,8 +701,14 @@ CUDADevice::CUDAMem *CUDADevice::generic_alloc(device_memory &mem, size_t pitch_
   }
 
   if (mem_alloc_result != CUDA_SUCCESS) {
-    status = " failed, out of device and host memory";
-    set_error("System is out of GPU and shared host memory");
+    if (mem.type == MEM_DEVICE_ONLY) {
+      status = " failed, out of device memory";
+      set_error("System is out of GPU memory");
+    }
+    else {
+      status = " failed, out of device and host memory";
+      set_error("System is out of GPU and shared host memory");
+    }
   }
 
   if (mem.name) {
@@ -773,6 +781,7 @@ void CUDADevice::generic_free(device_memory &mem)
   if (mem.device_pointer) {
     CUDAContextScope scope(this);
     thread_scoped_lock lock(cuda_mem_map_mutex);
+    DCHECK(cuda_mem_map.find(&mem) != cuda_mem_map.end());
     const CUDAMem &cmem = cuda_mem_map[&mem];
 
     /* If cmem.use_mapped_host is true, reference counting is used
@@ -927,7 +936,6 @@ void CUDADevice::tex_alloc(device_texture &mem)
 {
   CUDAContextScope scope(this);
 
-  /* General variables for both architectures */
   string bind_name = mem.name;
   size_t dsize = datatype_size(mem.data_type);
   size_t size = mem.memory_size();
@@ -1090,7 +1098,6 @@ void CUDADevice::tex_alloc(device_texture &mem)
 
   if (mem.info.data_type != IMAGE_DATA_TYPE_NANOVDB_FLOAT &&
       mem.info.data_type != IMAGE_DATA_TYPE_NANOVDB_FLOAT3) {
-    /* Kepler+, bindless textures. */
     CUDA_RESOURCE_DESC resDesc;
     memset(&resDesc, 0, sizeof(resDesc));
 
@@ -1141,6 +1148,7 @@ void CUDADevice::tex_free(device_texture &mem)
   if (mem.device_pointer) {
     CUDAContextScope scope(this);
     thread_scoped_lock lock(cuda_mem_map_mutex);
+    DCHECK(cuda_mem_map.find(&mem) != cuda_mem_map.end());
     const CUDAMem &cmem = cuda_mem_map[&mem];
 
     if (cmem.texobject) {

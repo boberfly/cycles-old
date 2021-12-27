@@ -21,7 +21,7 @@
 #  include "device/cuda/util.h"
 #  include "device/device.h"
 
-#  include "util/util_map.h"
+#  include "util/map.h"
 
 #  ifdef WITH_CUDA_DYNLOAD
 #    include "cuew.h"
@@ -75,8 +75,6 @@ class CUDADevice : public Device {
   CUDADeviceKernels kernels;
 
   static bool have_precompiled_kernels();
-
-  virtual bool show_samples() const override;
 
   virtual BVHLayoutMask get_bvh_layout_mask() const override;
 

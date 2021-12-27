@@ -16,11 +16,11 @@
 
 #pragma once
 
-#include "device/device_memory.h"
+#include "device/memory.h"
 
-#include "kernel/kernel_types.h"
+#include "kernel/types.h"
 
-#include "util/util_function.h"
+#include "util/function.h"
 
 CCL_NAMESPACE_BEGIN
 
@@ -30,6 +30,7 @@ class Progress;
 enum ShaderEvalType {
   SHADER_EVAL_DISPLACE,
   SHADER_EVAL_BACKGROUND,
+  SHADER_EVAL_CURVE_SHADOW_TRANSPARENCY,
 };
 
 /* ShaderEval class performs shader evaluation for background light and displacement. */

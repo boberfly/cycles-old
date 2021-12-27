@@ -16,14 +16,14 @@
 
 #include "device/hip/device.h"
 
-#include "util/util_logging.h"
+#include "util/log.h"
 
 #ifdef WITH_HIP
 #  include "device/device.h"
 #  include "device/hip/device_impl.h"
 
-#  include "util/util_string.h"
-#  include "util/util_windows.h"
+#  include "util/string.h"
+#  include "util/windows.h"
 #endif /* WITH_HIP */
 
 CCL_NAMESPACE_BEGIN
@@ -57,9 +57,16 @@ bool device_hip_init()
     }
   }
   else {
-    VLOG(1) << "HIPEW initialization failed: "
-            << ((hipew_result == HIPEW_ERROR_ATEXIT_FAILED) ? "Error setting up atexit() handler" :
-                                                              "Error opening the library");
+    if (hipew_result == HIPEW_ERROR_ATEXIT_FAILED) {
+      VLOG(1) << "HIPEW initialization failed: Error setting up atexit() handler";
+    }
+    else if (hipew_result == HIPEW_ERROR_OLD_DRIVER) {
+      VLOG(1) << "HIPEW initialization failed: Driver version too old, requires AMD Radeon Pro "
+                 "21.Q4 driver or newer";
+    }
+    else {
+      VLOG(1) << "HIPEW initialization failed: Error opening HIP dynamic library";
+    }
   }
 
   return result;
@@ -131,9 +138,9 @@ void device_hip_info(vector<DeviceInfo> &devices)
       continue;
     }
 
-    int major;
-    hipDeviceGetAttribute(&major, hipDeviceAttributeComputeCapabilityMajor, num);
-    // TODO : (Arya) What is the last major version we are supporting?
+    if (!hipSupportsDevice(num)) {
+      continue;
+    }
 
     DeviceInfo info;
 
@@ -141,7 +148,6 @@ void device_hip_info(vector<DeviceInfo> &devices)
     info.description = string(name);
     info.num = num;
 
-    info.has_half_images = (major >= 3);
     info.has_nanovdb = true;
     info.denoisers = 0;
 

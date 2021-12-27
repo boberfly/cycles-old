@@ -24,20 +24,18 @@
 
 #  include "device/hip/device_impl.h"
 
-#  include "render/buffers.h"
-
-#  include "util/util_debug.h"
-#  include "util/util_foreach.h"
-#  include "util/util_logging.h"
-#  include "util/util_map.h"
-#  include "util/util_md5.h"
-#  include "util/util_opengl.h"
-#  include "util/util_path.h"
-#  include "util/util_string.h"
-#  include "util/util_system.h"
-#  include "util/util_time.h"
-#  include "util/util_types.h"
-#  include "util/util_windows.h"
+#  include "util/debug.h"
+#  include "util/foreach.h"
+#  include "util/log.h"
+#  include "util/map.h"
+#  include "util/md5.h"
+#  include "util/opengl.h"
+#  include "util/path.h"
+#  include "util/string.h"
+#  include "util/system.h"
+#  include "util/time.h"
+#  include "util/types.h"
+#  include "util/windows.h"
 
 CCL_NAMESPACE_BEGIN
 
@@ -47,12 +45,6 @@ bool HIPDevice::have_precompiled_kernels()
 {
   string fatbins_path = path_get("lib");
   return path_exists(fatbins_path);
-}
-
-bool HIPDevice::show_samples() const
-{
-  /* The HIPDevice only processes one tile at a time, so showing samples is fine. */
-  return true;
 }
 
 BVHLayoutMask HIPDevice::get_bvh_layout_mask() const
@@ -101,13 +93,16 @@ HIPDevice::HIPDevice(const DeviceInfo &info, Stats &stats, Profiler &profiler)
   }
 
   /* Setup device and context. */
-  result = hipGetDevice(&hipDevice, hipDevId);
+  result = hipDeviceGet(&hipDevice, hipDevId);
   if (result != hipSuccess) {
     set_error(string_printf("Failed to get HIP device handle from ordinal (%s)",
                             hipewErrorString(result)));
     return;
   }
 
+  /* hipDeviceMapHost for mapping host memory when out of device memory.
+   * hipDeviceLmemResizeToMax for reserving local memory ahead of render,
+   * so we can predict which memory to map to host. */
   hip_assert(hipDeviceGetAttribute(&can_map_host, hipDeviceAttributeCanMapHostMemory, hipDevice));
 
   hip_assert(
@@ -145,12 +140,18 @@ HIPDevice::~HIPDevice()
 
 bool HIPDevice::support_device(const uint /*kernel_features*/)
 {
-  int major, minor;
-  hipDeviceGetAttribute(&major, hipDeviceAttributeComputeCapabilityMajor, hipDevId);
-  hipDeviceGetAttribute(&minor, hipDeviceAttributeComputeCapabilityMinor, hipDevId);
+  if (hipSupportsDevice(hipDevId)) {
+    return true;
+  }
+  else {
+    /* We only support Navi and above. */
+    hipDeviceProp_t props;
+    hipGetDeviceProperties(&props, hipDevId);
 
-  // TODO : (Arya) What versions do we plan to support?
-  return true;
+    set_error(string_printf("HIP backend requires AMD RDNA graphics card or up, but found %s.",
+                            props.name));
+    return false;
+  }
 }
 
 bool HIPDevice::check_peer_access(Device *peer_device)
@@ -205,7 +206,7 @@ bool HIPDevice::use_adaptive_compilation()
   return DebugFlags().hip.adaptive_compile;
 }
 
-/* Common NVCC flags which stays the same regardless of shading model,
+/* Common HIPCC flags which stays the same regardless of shading model,
  * kernel sources md5 and only depends on compiler or compilation settings.
  */
 string HIPDevice::compile_kernel_get_common_cflags(const uint kernel_features)
@@ -215,7 +216,6 @@ string HIPDevice::compile_kernel_get_common_cflags(const uint kernel_features)
   const string include_path = source_path;
   string cflags = string_printf(
       "-m%d "
-      "--ptxas-options=\"-v\" "
       "--use_fast_math "
       "-DHIPCC "
       "-I\"%s\"",
@@ -227,45 +227,29 @@ string HIPDevice::compile_kernel_get_common_cflags(const uint kernel_features)
   return cflags;
 }
 
-string HIPDevice::compile_kernel(const uint kernel_features,
-                                 const char *name,
-                                 const char *base,
-                                 bool force_ptx)
+string HIPDevice::compile_kernel(const uint kernel_features, const char *name, const char *base)
 {
   /* Compute kernel name. */
   int major, minor;
   hipDeviceGetAttribute(&major, hipDeviceAttributeComputeCapabilityMajor, hipDevId);
   hipDeviceGetAttribute(&minor, hipDeviceAttributeComputeCapabilityMinor, hipDevId);
+  hipDeviceProp_t props;
+  hipGetDeviceProperties(&props, hipDevId);
+
+  /* gcnArchName can contain tokens after the arch name with features, ie.
+   * `gfx1010:sramecc-:xnack-` so we tokenize it to get the first part. */
+  char *arch = strtok(props.gcnArchName, ":");
+  if (arch == NULL) {
+    arch = props.gcnArchName;
+  }
 
   /* Attempt to use kernel provided with Blender. */
   if (!use_adaptive_compilation()) {
-    if (!force_ptx) {
-      const string fatbin = path_get(string_printf("lib/%s_sm_%d%d.cubin", name, major, minor));
-      VLOG(1) << "Testing for pre-compiled kernel " << fatbin << ".";
-      if (path_exists(fatbin)) {
-        VLOG(1) << "Using precompiled kernel.";
-        return fatbin;
-      }
-    }
-
-    /* The driver can JIT-compile PTX generated for older generations, so find the closest one. */
-    int ptx_major = major, ptx_minor = minor;
-    while (ptx_major >= 3) {
-      const string ptx = path_get(
-          string_printf("lib/%s_compute_%d%d.ptx", name, ptx_major, ptx_minor));
-      VLOG(1) << "Testing for pre-compiled kernel " << ptx << ".";
-      if (path_exists(ptx)) {
-        VLOG(1) << "Using precompiled kernel.";
-        return ptx;
-      }
-
-      if (ptx_minor > 0) {
-        ptx_minor--;
-      }
-      else {
-        ptx_major--;
-        ptx_minor = 9;
-      }
+    const string fatbin = path_get(string_printf("lib/%s_%s.fatbin", name, arch));
+    VLOG(1) << "Testing for pre-compiled kernel " << fatbin << ".";
+    if (path_exists(fatbin)) {
+      VLOG(1) << "Using precompiled kernel.";
+      return fatbin;
     }
   }
 
@@ -280,17 +264,19 @@ string HIPDevice::compile_kernel(const uint kernel_features,
   const string kernel_md5 = util_md5_string(source_md5 + common_cflags);
 
   const char *const kernel_ext = "genco";
+  std::string options;
 #  ifdef _WIN32
-  const char *const options =
-      "save-temps -Wno-parentheses-equality -Wno-unused-value --hipcc-func-supp";
+  options.append("Wno-parentheses-equality -Wno-unused-value --hipcc-func-supp -ffast-math");
 #  else
-  const char *const options =
-      "save-temps -Wno-parentheses-equality -Wno-unused-value --hipcc-func-supp -O3 -ggdb";
+  options.append("Wno-parentheses-equality -Wno-unused-value --hipcc-func-supp -O3 -ffast-math");
 #  endif
+#  ifdef _DEBUG
+  options.append(" -save-temps");
+#  endif
+  options.append(" --amdgpu-target=").append(arch);
+
   const string include_path = source_path;
-  const char *const kernel_arch = force_ptx ? "compute" : "sm";
-  const string fatbin_file = string_printf(
-      "cycles_%s_%s_%d%d_%s", name, kernel_arch, major, minor, kernel_md5.c_str());
+  const string fatbin_file = string_printf("cycles_%s_%s_%s", name, arch, kernel_md5.c_str());
   const string fatbin = path_cache_get(path_join("kernels", fatbin_file));
   VLOG(1) << "Testing for locally compiled kernel " << fatbin << ".";
   if (path_exists(fatbin)) {
@@ -300,9 +286,9 @@ string HIPDevice::compile_kernel(const uint kernel_features,
 
 #  ifdef _WIN32
   if (!use_adaptive_compilation() && have_precompiled_kernels()) {
-    if (major < 3) {
+    if (!hipSupportsDevice(hipDevId)) {
       set_error(
-          string_printf("HIP backend requires compute capability 3.0 or up, but found %d.%d. "
+          string_printf("HIP backend requires compute capability 10.1 or up, but found %d.%d. "
                         "Your GPU is not supported.",
                         major,
                         minor));
@@ -347,13 +333,15 @@ string HIPDevice::compile_kernel(const uint kernel_features,
 
   string command = string_printf("%s -%s -I %s --%s %s -o \"%s\"",
                                  hipcc,
-                                 options,
+                                 options.c_str(),
                                  include_path.c_str(),
                                  kernel_ext,
                                  source_path.c_str(),
                                  fatbin.c_str());
 
-  printf("Compiling HIP kernel ...\n%s\n", command.c_str());
+  printf("Compiling %sHIP kernel ...\n%s\n",
+         (use_adaptive_compilation()) ? "adaptive " : "",
+         command.c_str());
 
 #  ifdef _WIN32
   command = "call " + command;
@@ -380,13 +368,14 @@ string HIPDevice::compile_kernel(const uint kernel_features,
 
 bool HIPDevice::load_kernels(const uint kernel_features)
 {
-  /* TODO(sergey): Support kernels re-load for HIP devices.
+  /* TODO(sergey): Support kernels re-load for HIP devices adaptive compile.
    *
-   * Currently re-loading kernel will invalidate memory pointers,
-   * causing problems in hipCtxSynchronize.
+   * Currently re-loading kernels will invalidate memory pointers.
    */
   if (hipModule) {
-    VLOG(1) << "Skipping kernel reload, not currently supported.";
+    if (use_adaptive_compilation()) {
+      VLOG(1) << "Skipping HIP kernel reload for adaptive compilation, not currently supported.";
+    }
     return true;
   }
 
@@ -395,8 +384,9 @@ bool HIPDevice::load_kernels(const uint kernel_features)
     return false;
 
   /* check if GPU is supported */
-  if (!support_device(kernel_features))
+  if (!support_device(kernel_features)) {
     return false;
+  }
 
   /* get kernel */
   const char *kernel_name = "kernel";
@@ -427,7 +417,7 @@ bool HIPDevice::load_kernels(const uint kernel_features)
   return (result == hipSuccess);
 }
 
-void HIPDevice::reserve_local_memory(const uint)
+void HIPDevice::reserve_local_memory(const uint kernel_features)
 {
   /* Together with hipDeviceLmemResizeToMax, this reserves local memory
    * needed for kernel launches, so that we can reliably figure out when
@@ -441,17 +431,19 @@ void HIPDevice::reserve_local_memory(const uint)
 
   {
     /* Use the biggest kernel for estimation. */
-    const DeviceKernel test_kernel = DEVICE_KERNEL_INTEGRATOR_SHADE_SURFACE_RAYTRACE;
+    const DeviceKernel test_kernel = (kernel_features & KERNEL_FEATURE_NODE_RAYTRACE) ?
+                                         DEVICE_KERNEL_INTEGRATOR_SHADE_SURFACE_RAYTRACE :
+                                         DEVICE_KERNEL_INTEGRATOR_SHADE_SURFACE;
 
     /* Launch kernel, using just 1 block appears sufficient to reserve memory for all
      * multiprocessors. It would be good to do this in parallel for the multi GPU case
      * still to make it faster. */
     HIPDeviceQueue queue(this);
 
-    void *d_path_index = nullptr;
-    void *d_render_buffer = nullptr;
+    device_ptr d_path_index = 0;
+    device_ptr d_render_buffer = 0;
     int d_work_size = 0;
-    void *args[] = {&d_path_index, &d_render_buffer, &d_work_size};
+    DeviceKernelArguments args(&d_path_index, &d_render_buffer, &d_work_size);
 
     queue.init_execution();
     queue.enqueue(test_kernel, 1, args);
@@ -657,7 +649,8 @@ HIPDevice::HIPMem *HIPDevice::generic_alloc(device_memory &mem, size_t pitch_pad
     }
     else if (map_host_used + size < map_host_limit) {
       /* Allocate host memory ourselves. */
-      mem_alloc_result = hipHostMalloc(&shared_pointer, size);
+      mem_alloc_result = hipHostMalloc(
+          &shared_pointer, size, hipHostMallocMapped | hipHostMallocWriteCombined);
 
       assert((mem_alloc_result == hipSuccess && shared_pointer != 0) ||
              (mem_alloc_result != hipSuccess && shared_pointer == 0));
@@ -745,6 +738,7 @@ void HIPDevice::generic_free(device_memory &mem)
   if (mem.device_pointer) {
     HIPContextScope scope(this);
     thread_scoped_lock lock(hip_mem_map_mutex);
+    DCHECK(hip_mem_map.find(&mem) != hip_mem_map.end());
     const HIPMem &cmem = hip_mem_map[&mem];
 
     /* If cmem.use_mapped_host is true, reference counting is used
@@ -874,7 +868,6 @@ void HIPDevice::const_copy_to(const char *name, void *host, size_t size)
   size_t bytes;
 
   hip_assert(hipModuleGetGlobal(&mem, &bytes, hipModule, name));
-  assert(bytes == size);
   hip_assert(hipMemcpyHtoD(mem, host, size));
 }
 
@@ -899,7 +892,6 @@ void HIPDevice::tex_alloc(device_texture &mem)
 {
   HIPContextScope scope(this);
 
-  /* General variables for both architectures */
   string bind_name = mem.name;
   size_t dsize = datatype_size(mem.data_type);
   size_t size = mem.memory_size();
@@ -989,16 +981,16 @@ void HIPDevice::tex_alloc(device_texture &mem)
             << string_human_readable_number(mem.memory_size()) << " bytes. ("
             << string_human_readable_size(mem.memory_size()) << ")";
 
-    hip_assert(hipArray3DCreate(&array_3d, &desc));
+    hip_assert(hipArray3DCreate((hArray *)&array_3d, &desc));
 
     if (!array_3d) {
       return;
     }
 
     HIP_MEMCPY3D param;
-    memset(&param, 0, sizeof(param));
+    memset(&param, 0, sizeof(HIP_MEMCPY3D));
     param.dstMemoryType = hipMemoryTypeArray;
-    param.dstArray = &array_3d;
+    param.dstArray = array_3d;
     param.srcMemoryType = hipMemoryTypeHost;
     param.srcHost = mem.host_pointer;
     param.srcPitch = src_pitch;
@@ -1064,13 +1056,12 @@ void HIPDevice::tex_alloc(device_texture &mem)
 
   if (mem.info.data_type != IMAGE_DATA_TYPE_NANOVDB_FLOAT &&
       mem.info.data_type != IMAGE_DATA_TYPE_NANOVDB_FLOAT3) {
-    /* Kepler+, bindless textures. */
     hipResourceDesc resDesc;
     memset(&resDesc, 0, sizeof(resDesc));
 
     if (array_3d) {
       resDesc.resType = hipResourceTypeArray;
-      resDesc.res.array.h_Array = &array_3d;
+      resDesc.res.array.h_Array = array_3d;
       resDesc.flags = 0;
     }
     else if (mem.data_height > 0) {
@@ -1115,6 +1106,7 @@ void HIPDevice::tex_free(device_texture &mem)
   if (mem.device_pointer) {
     HIPContextScope scope(this);
     thread_scoped_lock lock(hip_mem_map_mutex);
+    DCHECK(hip_mem_map.find(&mem) != hip_mem_map.end());
     const HIPMem &cmem = hip_mem_map[&mem];
 
     if (cmem.texobject) {
@@ -1142,141 +1134,6 @@ void HIPDevice::tex_free(device_texture &mem)
   }
 }
 
-#  if 0
-void HIPDevice::render(DeviceTask &task,
-                        RenderTile &rtile,
-                        device_vector<KernelWorkTile> &work_tiles)
-{
-  scoped_timer timer(&rtile.buffers->render_time);
-
-  if (have_error())
-    return;
-
-  HIPContextScope scope(this);
-  hipFunction_t hipRender;
-
-  /* Get kernel function. */
-  if (rtile.task == RenderTile::BAKE) {
-    hip_assert(hipModuleGetFunction(&hipRender, hipModule, "kernel_hip_bake"));
-  }
-  else {
-    hip_assert(hipModuleGetFunction(&hipRender, hipModule, "kernel_hip_path_trace"));
-  }
-
-  if (have_error()) {
-    return;
-  }
-
-  hip_assert(hipFuncSetCacheConfig(hipRender, hipFuncCachePreferL1));
-
-  /* Allocate work tile. */
-  work_tiles.alloc(1);
-
-  KernelWorkTile *wtile = work_tiles.data();
-  wtile->x = rtile.x;
-  wtile->y = rtile.y;
-  wtile->w = rtile.w;
-  wtile->h = rtile.h;
-  wtile->offset = rtile.offset;
-  wtile->stride = rtile.stride;
-  wtile->buffer = (float *)(hipDeviceptr_t)rtile.buffer;
-
-  /* Prepare work size. More step samples render faster, but for now we
-   * remain conservative for GPUs connected to a display to avoid driver
-   * timeouts and display freezing. */
-  int min_blocks, num_threads_per_block;
-  hip_assert(
-      hipModuleOccupancyMaxPotentialBlockSize(&min_blocks, &num_threads_per_block, hipRender, NULL, 0, 0));
-  if (!info.display_device) {
-    min_blocks *= 8;
-  }
-
-  uint step_samples = divide_up(min_blocks * num_threads_per_block, wtile->w * wtile->h);
-
-  /* Render all samples. */
-  uint start_sample = rtile.start_sample;
-  uint end_sample = rtile.start_sample + rtile.num_samples;
-
-  for (int sample = start_sample; sample < end_sample;) {
-    /* Setup and copy work tile to device. */
-    wtile->start_sample = sample;
-    wtile->num_samples = step_samples;
-    if (task.adaptive_sampling.use) {
-      wtile->num_samples = task.adaptive_sampling.align_samples(sample, step_samples);
-    }
-    wtile->num_samples = min(wtile->num_samples, end_sample - sample);
-    work_tiles.copy_to_device();
-
-    hipDeviceptr_t d_work_tiles = (hipDeviceptr_t)work_tiles.device_pointer;
-    uint total_work_size = wtile->w * wtile->h * wtile->num_samples;
-    uint num_blocks = divide_up(total_work_size, num_threads_per_block);
-
-    /* Launch kernel. */
-    void *args[] = {&d_work_tiles, &total_work_size};
-
-    hip_assert(
-        hipModuleLaunchKernel(hipRender, num_blocks, 1, 1, num_threads_per_block, 1, 1, 0, 0, args, 0));
-
-    /* Run the adaptive sampling kernels at selected samples aligned to step samples. */
-    uint filter_sample = sample + wtile->num_samples - 1;
-    if (task.adaptive_sampling.use && task.adaptive_sampling.need_filter(filter_sample)) {
-      adaptive_sampling_filter(filter_sample, wtile, d_work_tiles);
-    }
-
-    hip_assert(hipDeviceSynchronize());
-
-    /* Update progress. */
-    sample += wtile->num_samples;
-    rtile.sample = sample;
-    task.update_progress(&rtile, rtile.w * rtile.h * wtile->num_samples);
-
-    if (task.get_cancel()) {
-      if (task.need_finish_queue == false)
-        break;
-    }
-  }
-
-  /* Finalize adaptive sampling. */
-  if (task.adaptive_sampling.use) {
-    hipDeviceptr_t d_work_tiles = (hipDeviceptr_t)work_tiles.device_pointer;
-    adaptive_sampling_post(rtile, wtile, d_work_tiles);
-    hip_assert(hipDeviceSynchronize());
-    task.update_progress(&rtile, rtile.w * rtile.h * wtile->num_samples);
-  }
-}
-
-void HIPDevice::thread_run(DeviceTask &task)
-{
-  HIPContextScope scope(this);
-
-  if (task.type == DeviceTask::RENDER) {
-    device_vector<KernelWorkTile> work_tiles(this, "work_tiles", MEM_READ_ONLY);
-
-    /* keep rendering tiles until done */
-    RenderTile tile;
-    DenoisingTask denoising(this, task);
-
-    while (task.acquire_tile(this, tile, task.tile_types)) {
-      if (tile.task == RenderTile::PATH_TRACE) {
-        render(task, tile, work_tiles);
-      }
-      else if (tile.task == RenderTile::BAKE) {
-        render(task, tile, work_tiles);
-      }
-
-      task.release_tile(tile);
-
-      if (task.get_cancel()) {
-        if (task.need_finish_queue == false)
-          break;
-      }
-    }
-
-    work_tiles.free();
-  }
-}
-#  endif
-
 unique_ptr<DeviceQueue> HIPDevice::gpu_queue_create()
 {
   return make_unique<HIPDeviceQueue>(this);
@@ -1290,6 +1147,8 @@ bool HIPDevice::should_use_graphics_interop()
    * possible, but from the empiric measurements it can be considerably slower than using naive
    * pixels copy. */
 
+  /* Disable graphics interop for now, because of driver bug in 21.40. See T92972 */
+#  if 0
   HIPContextScope scope(this);
 
   int num_all_devices = 0;
@@ -1308,6 +1167,7 @@ bool HIPDevice::should_use_graphics_interop()
       return true;
     }
   }
+#  endif
 
   return false;
 }

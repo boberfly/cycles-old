@@ -19,19 +19,18 @@
 #include <sstream>
 #include <stdlib.h>
 
-#include "bvh/bvh_multi.h"
+#include "bvh/multi.h"
 
 #include "device/device.h"
-#include "device/device_queue.h"
+#include "device/queue.h"
 
-#include "render/buffers.h"
-#include "render/geometry.h"
+#include "scene/geometry.h"
 
-#include "util/util_foreach.h"
-#include "util/util_list.h"
-#include "util/util_logging.h"
-#include "util/util_map.h"
-#include "util/util_time.h"
+#include "util/foreach.h"
+#include "util/list.h"
+#include "util/log.h"
+#include "util/map.h"
+#include "util/time.h"
 
 CCL_NAMESPACE_BEGIN
 
@@ -110,14 +109,6 @@ class MultiDevice : public Device {
     return error_msg;
   }
 
-  virtual bool show_samples() const override
-  {
-    if (devices.size() > 1) {
-      return false;
-    }
-    return devices.front().device->show_samples();
-  }
-
   virtual BVHLayoutMask get_bvh_layout_mask() const override
   {
     BVHLayoutMask bvh_layout_mask = BVH_LAYOUT_ALL;
@@ -133,10 +124,19 @@ class MultiDevice : public Device {
       return BVH_LAYOUT_MULTI_OPTIX;
     }
 
+    /* With multiple Metal devices, every device needs its own acceleration structure */
+    if (bvh_layout_mask == BVH_LAYOUT_METAL) {
+      return BVH_LAYOUT_MULTI_METAL;
+    }
+
     /* When devices do not share a common BVH layout, fall back to creating one for each */
     const BVHLayoutMask BVH_LAYOUT_OPTIX_EMBREE = (BVH_LAYOUT_OPTIX | BVH_LAYOUT_EMBREE);
     if ((bvh_layout_mask_all & BVH_LAYOUT_OPTIX_EMBREE) == BVH_LAYOUT_OPTIX_EMBREE) {
       return BVH_LAYOUT_MULTI_OPTIX_EMBREE;
+    }
+    const BVHLayoutMask BVH_LAYOUT_METAL_EMBREE = (BVH_LAYOUT_METAL | BVH_LAYOUT_EMBREE);
+    if ((bvh_layout_mask_all & BVH_LAYOUT_METAL_EMBREE) == BVH_LAYOUT_METAL_EMBREE) {
+      return BVH_LAYOUT_MULTI_METAL_EMBREE;
     }
 
     return bvh_layout_mask;
@@ -160,7 +160,9 @@ class MultiDevice : public Device {
     }
 
     assert(bvh->params.bvh_layout == BVH_LAYOUT_MULTI_OPTIX ||
-           bvh->params.bvh_layout == BVH_LAYOUT_MULTI_OPTIX_EMBREE);
+           bvh->params.bvh_layout == BVH_LAYOUT_MULTI_METAL ||
+           bvh->params.bvh_layout == BVH_LAYOUT_MULTI_OPTIX_EMBREE ||
+           bvh->params.bvh_layout == BVH_LAYOUT_MULTI_METAL_EMBREE);
 
     BVHMulti *const bvh_multi = static_cast<BVHMulti *>(bvh);
     bvh_multi->sub_bvhs.resize(devices.size());
@@ -183,8 +185,13 @@ class MultiDevice : public Device {
         BVHParams params = bvh->params;
         if (bvh->params.bvh_layout == BVH_LAYOUT_MULTI_OPTIX)
           params.bvh_layout = BVH_LAYOUT_OPTIX;
+        else if (bvh->params.bvh_layout == BVH_LAYOUT_MULTI_METAL)
+          params.bvh_layout = BVH_LAYOUT_METAL;
         else if (bvh->params.bvh_layout == BVH_LAYOUT_MULTI_OPTIX_EMBREE)
           params.bvh_layout = sub.device->info.type == DEVICE_OPTIX ? BVH_LAYOUT_OPTIX :
+                                                                      BVH_LAYOUT_EMBREE;
+        else if (bvh->params.bvh_layout == BVH_LAYOUT_MULTI_METAL_EMBREE)
+          params.bvh_layout = sub.device->info.type == DEVICE_METAL ? BVH_LAYOUT_METAL :
                                                                       BVH_LAYOUT_EMBREE;
 
         /* Skip building a bottom level acceleration structure for non-instanced geometry on Embree

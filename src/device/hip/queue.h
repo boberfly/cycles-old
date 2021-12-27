@@ -18,9 +18,9 @@
 
 #ifdef WITH_HIP
 
-#  include "device/device_kernel.h"
-#  include "device/device_memory.h"
-#  include "device/device_queue.h"
+#  include "device/kernel.h"
+#  include "device/memory.h"
+#  include "device/queue.h"
 
 #  include "device/hip/util.h"
 
@@ -42,7 +42,9 @@ class HIPDeviceQueue : public DeviceQueue {
 
   virtual bool kernel_available(DeviceKernel kernel) const override;
 
-  virtual bool enqueue(DeviceKernel kernel, const int work_size, void *args[]) override;
+  virtual bool enqueue(DeviceKernel kernel,
+                       const int work_size,
+                       DeviceKernelArguments const &args) override;
 
   virtual bool synchronize() override;
 
@@ -55,12 +57,13 @@ class HIPDeviceQueue : public DeviceQueue {
     return hip_stream_;
   }
 
-  // TODO : (Arya) Enable this after stabilizing the dev branch
   virtual unique_ptr<DeviceGraphicsInterop> graphics_interop_create() override;
 
  protected:
   HIPDevice *hip_device_;
   hipStream_t hip_stream_;
+
+  void assert_success(hipError_t result, const char *operation);
 };
 
 CCL_NAMESPACE_END

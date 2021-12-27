@@ -32,8 +32,11 @@
 
 #pragma once
 
-#include "kernel/kernel_lookup_table.h"
-#include "kernel/kernel_random.h"
+#include "kernel/closure/bsdf_util.h"
+
+#include "kernel/sample/pattern.h"
+
+#include "kernel/util/lookup_table.h"
 
 CCL_NAMESPACE_BEGIN
 
@@ -55,7 +58,7 @@ static_assert(sizeof(ShaderClosure) >= sizeof(MicrofacetBsdf), "MicrofacetBsdf i
 
 /* Beckmann and GGX microfacet importance sampling. */
 
-ccl_device_inline void microfacet_beckmann_sample_slopes(ccl_global const KernelGlobals *kg,
+ccl_device_inline void microfacet_beckmann_sample_slopes(KernelGlobals kg,
                                                          const float cos_theta_i,
                                                          const float sin_theta_i,
                                                          float randu,
@@ -195,7 +198,7 @@ ccl_device_inline void microfacet_ggx_sample_slopes(const float cos_theta_i,
   *slope_y = S * z * safe_sqrtf(1.0f + (*slope_x) * (*slope_x));
 }
 
-ccl_device_forceinline float3 microfacet_sample_stretched(ccl_global const KernelGlobals *kg,
+ccl_device_forceinline float3 microfacet_sample_stretched(KernelGlobals kg,
                                                           const float3 omega_i,
                                                           const float alpha_x,
                                                           const float alpha_y,
@@ -312,8 +315,8 @@ ccl_device int bsdf_microfacet_ggx_setup(ccl_private MicrofacetBsdf *bsdf)
 {
   bsdf->extra = NULL;
 
-  bsdf->alpha_x = saturate(bsdf->alpha_x);
-  bsdf->alpha_y = saturate(bsdf->alpha_y);
+  bsdf->alpha_x = saturatef(bsdf->alpha_x);
+  bsdf->alpha_y = saturatef(bsdf->alpha_y);
 
   bsdf->type = CLOSURE_BSDF_MICROFACET_GGX_ID;
 
@@ -333,8 +336,8 @@ ccl_device int bsdf_microfacet_ggx_fresnel_setup(ccl_private MicrofacetBsdf *bsd
 {
   bsdf->extra->cspec0 = saturate3(bsdf->extra->cspec0);
 
-  bsdf->alpha_x = saturate(bsdf->alpha_x);
-  bsdf->alpha_y = saturate(bsdf->alpha_y);
+  bsdf->alpha_x = saturatef(bsdf->alpha_x);
+  bsdf->alpha_y = saturatef(bsdf->alpha_y);
 
   bsdf->type = CLOSURE_BSDF_MICROFACET_GGX_FRESNEL_ID;
 
@@ -348,7 +351,7 @@ ccl_device int bsdf_microfacet_ggx_clearcoat_setup(ccl_private MicrofacetBsdf *b
 {
   bsdf->extra->cspec0 = saturate3(bsdf->extra->cspec0);
 
-  bsdf->alpha_x = saturate(bsdf->alpha_x);
+  bsdf->alpha_x = saturatef(bsdf->alpha_x);
   bsdf->alpha_y = bsdf->alpha_x;
 
   bsdf->type = CLOSURE_BSDF_MICROFACET_GGX_CLEARCOAT_ID;
@@ -362,7 +365,7 @@ ccl_device int bsdf_microfacet_ggx_refraction_setup(ccl_private MicrofacetBsdf *
 {
   bsdf->extra = NULL;
 
-  bsdf->alpha_x = saturate(bsdf->alpha_x);
+  bsdf->alpha_x = saturatef(bsdf->alpha_x);
   bsdf->alpha_y = bsdf->alpha_x;
 
   bsdf->type = CLOSURE_BSDF_MICROFACET_GGX_REFRACTION_ID;
@@ -549,7 +552,7 @@ ccl_device float3 bsdf_microfacet_ggx_eval_transmit(ccl_private const ShaderClos
   return make_float3(out, out, out);
 }
 
-ccl_device int bsdf_microfacet_ggx_sample(ccl_global const KernelGlobals *kg,
+ccl_device int bsdf_microfacet_ggx_sample(KernelGlobals kg,
                                           ccl_private const ShaderClosure *sc,
                                           float3 Ng,
                                           float3 I,
@@ -780,8 +783,8 @@ ccl_device int bsdf_microfacet_ggx_sample(ccl_global const KernelGlobals *kg,
 
 ccl_device int bsdf_microfacet_beckmann_setup(ccl_private MicrofacetBsdf *bsdf)
 {
-  bsdf->alpha_x = saturate(bsdf->alpha_x);
-  bsdf->alpha_y = saturate(bsdf->alpha_y);
+  bsdf->alpha_x = saturatef(bsdf->alpha_x);
+  bsdf->alpha_y = saturatef(bsdf->alpha_y);
 
   bsdf->type = CLOSURE_BSDF_MICROFACET_BECKMANN_ID;
   return SD_BSDF | SD_BSDF_HAS_EVAL;
@@ -797,7 +800,7 @@ ccl_device int bsdf_microfacet_beckmann_isotropic_setup(ccl_private MicrofacetBs
 
 ccl_device int bsdf_microfacet_beckmann_refraction_setup(ccl_private MicrofacetBsdf *bsdf)
 {
-  bsdf->alpha_x = saturate(bsdf->alpha_x);
+  bsdf->alpha_x = saturatef(bsdf->alpha_x);
   bsdf->alpha_y = bsdf->alpha_x;
 
   bsdf->type = CLOSURE_BSDF_MICROFACET_BECKMANN_REFRACTION_ID;
@@ -977,7 +980,7 @@ ccl_device float3 bsdf_microfacet_beckmann_eval_transmit(ccl_private const Shade
   return make_float3(out, out, out);
 }
 
-ccl_device int bsdf_microfacet_beckmann_sample(ccl_global const KernelGlobals *kg,
+ccl_device int bsdf_microfacet_beckmann_sample(KernelGlobals kg,
                                                ccl_private const ShaderClosure *sc,
                                                float3 Ng,
                                                float3 I,
