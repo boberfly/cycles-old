@@ -82,7 +82,7 @@ static void session_print_status()
   string status, substatus;
 
   /* get status */
-  float progress = options.session->progress.get_progress();
+  float progress = static_cast<float>( options.session->progress.get_progress() );
   options.session->progress.get_status(status, substatus);
 
   if (substatus != "")
