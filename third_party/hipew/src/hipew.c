@@ -70,6 +70,8 @@ thipInit *hipInit;
 thipDriverGetVersion *hipDriverGetVersion;
 thipGetDevice *hipGetDevice;
 thipGetDeviceCount *hipGetDeviceCount;
+thipGetDeviceProperties *hipGetDeviceProperties;
+thipDeviceGet* hipDeviceGet;
 thipDeviceGetName *hipDeviceGetName;
 thipDeviceGetAttribute *hipDeviceGetAttribute;
 thipDeviceComputeCapability *hipDeviceComputeCapability;
@@ -178,6 +180,17 @@ thipGraphicsResourceGetMappedPointer *hipGraphicsResourceGetMappedPointer;
 thipGraphicsGLRegisterBuffer *hipGraphicsGLRegisterBuffer;
 thipGLGetDevices *hipGLGetDevices;
 
+thiprtcGetErrorString* hiprtcGetErrorString;
+thiprtcAddNameExpression* hiprtcAddNameExpression;
+thiprtcCompileProgram* hiprtcCompileProgram;
+thiprtcCreateProgram* hiprtcCreateProgram;
+thiprtcDestroyProgram* hiprtcDestroyProgram;
+thiprtcGetLoweredName* hiprtcGetLoweredName;
+thiprtcGetProgramLog* hiprtcGetProgramLog;
+thiprtcGetProgramLogSize* hiprtcGetProgramLogSize;
+thiprtcGetCode* hiprtcGetCode;
+thiprtcGetCodeSize* hiprtcGetCodeSize;
+
 
 
 static DynamicLibrary dynamic_library_open_find(const char **paths) {
@@ -200,6 +213,36 @@ static void hipewHipExit(void) {
     hip_lib = NULL;
   }
 }
+
+#ifdef _WIN32
+static int hipewHasOldDriver(const char *hip_path) {
+  DWORD verHandle = 0;
+  DWORD verSize = GetFileVersionInfoSize(hip_path, &verHandle);
+  int old_driver = 0;
+  if (verSize != 0) {
+    LPSTR verData = (LPSTR)malloc(verSize);
+    if (GetFileVersionInfo(hip_path, verHandle, verSize, verData)) {
+      LPBYTE lpBuffer = NULL;
+      UINT size = 0;
+      if (VerQueryValue(verData, "\\", (VOID FAR * FAR *)&lpBuffer, &size)) {
+        if (size) {
+          VS_FIXEDFILEINFO *verInfo = (VS_FIXEDFILEINFO *)lpBuffer;
+          /* Magic value from
+           * https://docs.microsoft.com/en-us/windows/win32/api/verrsrc/ns-verrsrc-vs_fixedfileinfo */
+          if (verInfo->dwSignature == 0xfeef04bd) {
+            unsigned int fileVersionLS0 = (verInfo->dwFileVersionLS >> 16) & 0xffff;
+            unsigned int fileversionLS1 = (verInfo->dwFileVersionLS >> 0) & 0xffff;
+            /* Corresponds to versions older than AMD Radeon Pro 21.Q4. */
+            old_driver = ((fileVersionLS0 < 3354) || (fileVersionLS0 == 3354 && fileversionLS1 < 13));
+          }
+        }
+      }
+    }
+    free(verData);
+  }
+  return old_driver;
+}
+#endif
 
 static int hipewHipInit(void) {
   /* Library paths. */
@@ -228,6 +271,14 @@ static int hipewHipInit(void) {
     return result;
   }
 
+#ifdef _WIN32
+  /* Test for driver version. */
+  if(hipewHasOldDriver(hip_paths[0])) {
+     result = HIPEW_ERROR_OLD_DRIVER;
+     return result;
+  }
+#endif
+
   /* Load library. */
   hip_lib = dynamic_library_open_find(hip_paths);
 
@@ -242,6 +293,8 @@ static int hipewHipInit(void) {
   HIP_LIBRARY_FIND_CHECKED(hipDriverGetVersion);
   HIP_LIBRARY_FIND_CHECKED(hipGetDevice);
   HIP_LIBRARY_FIND_CHECKED(hipGetDeviceCount);
+  HIP_LIBRARY_FIND_CHECKED(hipGetDeviceProperties);
+  HIP_LIBRARY_FIND_CHECKED(hipDeviceGet);
   HIP_LIBRARY_FIND_CHECKED(hipDeviceGetName);
   HIP_LIBRARY_FIND_CHECKED(hipDeviceGetAttribute);
   HIP_LIBRARY_FIND_CHECKED(hipDeviceComputeCapability);
@@ -346,6 +399,16 @@ static int hipewHipInit(void) {
   HIP_LIBRARY_FIND_CHECKED(hipGraphicsGLRegisterBuffer);
   HIP_LIBRARY_FIND_CHECKED(hipGLGetDevices);
 #endif
+  HIP_LIBRARY_FIND_CHECKED(hiprtcGetErrorString);
+  HIP_LIBRARY_FIND_CHECKED(hiprtcAddNameExpression);
+  HIP_LIBRARY_FIND_CHECKED(hiprtcCompileProgram);
+  HIP_LIBRARY_FIND_CHECKED(hiprtcCreateProgram);
+  HIP_LIBRARY_FIND_CHECKED(hiprtcDestroyProgram);
+  HIP_LIBRARY_FIND_CHECKED(hiprtcGetLoweredName);
+  HIP_LIBRARY_FIND_CHECKED(hiprtcGetProgramLog);
+  HIP_LIBRARY_FIND_CHECKED(hiprtcGetProgramLogSize);
+  HIP_LIBRARY_FIND_CHECKED(hiprtcGetCode);
+  HIP_LIBRARY_FIND_CHECKED(hiprtcGetCodeSize);
   result = HIPEW_SUCCESS;
   return result;
 }
