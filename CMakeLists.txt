@@ -98,6 +98,9 @@ endif()
 
 option(WITH_CUDA_DYNLOAD           "Dynamically load CUDA libraries at runtime" ON)
 mark_as_advanced(WITH_CUDA_DYNLOAD)
+option(WITH_CYCLES_HIP_BINARIES     "Build Cycles HIP binaries" OFF)
+set(CYCLES_HIP_BINARIES_ARCH gfx1010 gfx1011 gfx1012 gfx1030 gfx1031 gfx1032 gfx1034 CACHE STRING "AMD HIP architectures to build binaries for")
+mark_as_advanced(CYCLES_HIP_BINARIES_ARCH)
 
 ###########################################################################
 # Configuration.
