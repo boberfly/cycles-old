@@ -551,6 +551,8 @@ if(WITH_CYCLES_OPENVDB)
       find_package(Blosc REQUIRED)
     endif()
 
+    find_package(NanoVDB REQUIRED)
+
     set(WITH_OPENVDB ON)
     set(OPENVDB_DEFINITIONS -DNOMINMAX -D_USE_MATH_DEFINES)
   endif()
