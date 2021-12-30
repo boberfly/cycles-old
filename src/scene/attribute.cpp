@@ -248,6 +248,14 @@ size_t Attribute::element_size(Geometry *geom, AttributePrimitive prim) const
         }
       }
       break;
+    case ATTR_ELEMENT_CORNER_MOTION:
+      if (geom->geometry_type == Geometry::MESH) {
+        Mesh *mesh = static_cast<Mesh *>(geom);
+        if (prim == ATTR_PRIM_GEOMETRY) {
+          size = (mesh->num_triangles() * 3) * (mesh->get_motion_steps() - 1);
+        }
+      }
+      break;
     case ATTR_ELEMENT_CURVE:
       if (geom->geometry_type == Geometry::HAIR) {
         Hair *hair = static_cast<Hair *>(geom);
@@ -327,6 +335,8 @@ const char *Attribute::standard_name(AttributeStandard std)
       return "N";
     case ATTR_STD_FACE_NORMAL:
       return "Ng";
+    case ATTR_STD_CORNER_NORMAL:
+      return "Nc";
     case ATTR_STD_UV:
       return "uv";
     case ATTR_STD_GENERATED:
@@ -347,6 +357,8 @@ const char *Attribute::standard_name(AttributeStandard std)
       return "motion_P";
     case ATTR_STD_MOTION_VERTEX_NORMAL:
       return "motion_N";
+    case ATTR_STD_MOTION_CORNER_NORMAL:
+      return "motion_Nc";
     case ATTR_STD_PARTICLE:
       return "particle";
     case ATTR_STD_CURVE_INTERCEPT:
@@ -523,6 +535,9 @@ Attribute *AttributeSet::add(AttributeStandard std, ustring name)
       case ATTR_STD_FACE_NORMAL:
         attr = add(name, TypeDesc::TypeNormal, ATTR_ELEMENT_FACE);
         break;
+      case ATTR_STD_CORNER_NORMAL:
+        attr = add(name, TypeDesc::TypeNormal, ATTR_ELEMENT_CORNER);
+        break;
       case ATTR_STD_UV:
         attr = add(name, TypeFloat2, ATTR_ELEMENT_CORNER);
         break;
@@ -545,6 +560,9 @@ Attribute *AttributeSet::add(AttributeStandard std, ustring name)
         break;
       case ATTR_STD_MOTION_VERTEX_NORMAL:
         attr = add(name, TypeDesc::TypeNormal, ATTR_ELEMENT_VERTEX_MOTION);
+        break;
+      case ATTR_STD_MOTION_CORNER_NORMAL:
+        attr = add(name, TypeDesc::TypeNormal, ATTR_ELEMENT_CORNER_MOTION);
         break;
       case ATTR_STD_PTEX_FACE_ID:
         attr = add(name, TypeDesc::TypeFloat, ATTR_ELEMENT_FACE);

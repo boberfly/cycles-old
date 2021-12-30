@@ -58,6 +58,7 @@ DeviceScene::DeviceScene(Device *device)
       tri_verts(device, "__tri_verts", MEM_GLOBAL),
       tri_shader(device, "__tri_shader", MEM_GLOBAL),
       tri_vnormal(device, "__tri_vnormal", MEM_GLOBAL),
+      object_vnormal_offset(device, "__object_vnormal_offset", MEM_GLOBAL),
       tri_vindex(device, "__tri_vindex", MEM_GLOBAL),
       tri_patch(device, "__tri_patch", MEM_GLOBAL),
       tri_patch_uv(device, "__tri_patch_uv", MEM_GLOBAL),
@@ -419,6 +420,8 @@ bool Scene::need_global_attribute(AttributeStandard std)
   else if (std == ATTR_STD_MOTION_VERTEX_POSITION)
     return need_motion() != MOTION_NONE;
   else if (std == ATTR_STD_MOTION_VERTEX_NORMAL)
+    return need_motion() == MOTION_BLUR;
+  else if (std == ATTR_STD_MOTION_CORNER_NORMAL)
     return need_motion() == MOTION_BLUR;
 
   return false;

@@ -237,7 +237,7 @@ ccl_device float3 svm_bevel(
         float v = isect.hits[hit].v;
 
         if (sd->type == PRIMITIVE_TRIANGLE) {
-          N = triangle_smooth_normal(kg, N, prim, u, v);
+          N = triangle_smooth_normal(kg, N, sd->object, prim, u, v);
         }
 #  ifdef __OBJECT_MOTION__
         else if (sd->type == PRIMITIVE_MOTION_TRIANGLE) {

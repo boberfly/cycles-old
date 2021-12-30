@@ -1019,6 +1019,7 @@ void GeometryManager::mesh_calc_offset(Scene *scene, BVHLayout bvh_layout)
   size_t patch_size = 0;
   size_t face_size = 0;
   size_t corner_size = 0;
+  size_t normals_size = 0;
 
   foreach (Geometry *geom, scene->geometry) {
     bool prim_offset_changed = false;
@@ -1034,6 +1035,7 @@ void GeometryManager::mesh_calc_offset(Scene *scene, BVHLayout bvh_layout)
       mesh->patch_offset = patch_size;
       mesh->face_offset = face_size;
       mesh->corner_offset = corner_size;
+      mesh->normals_offset = normals_size;
 
       vert_size += mesh->verts.size();
       tri_size += mesh->num_triangles();
@@ -1051,6 +1053,12 @@ void GeometryManager::mesh_calc_offset(Scene *scene, BVHLayout bvh_layout)
 
       face_size += mesh->get_num_subd_faces();
       corner_size += mesh->subd_face_corners.size();
+
+      if (mesh->attributes.find(ATTR_STD_CORNER_NORMAL)) {
+        normals_size += mesh->num_triangles() * 3;
+      } else {
+        normals_size += mesh->verts.size();
+      }
     }
     else if (geom->is_hair()) {
       Hair *hair = static_cast<Hair *>(geom);
@@ -1092,6 +1100,7 @@ void GeometryManager::device_update_mesh(Device *,
   /* Count. */
   size_t vert_size = 0;
   size_t tri_size = 0;
+  size_t normals_size = 0;
 
   size_t curve_key_size = 0;
   size_t curve_size = 0;
@@ -1107,6 +1116,13 @@ void GeometryManager::device_update_mesh(Device *,
 
       vert_size += mesh->verts.size();
       tri_size += mesh->num_triangles();
+
+      /* Making more space for normals if they are per-corner */
+      if (mesh->attributes.find(ATTR_STD_CORNER_NORMAL)) {
+        normals_size += mesh->num_triangles() * 3;
+      } else {
+        normals_size += mesh->verts.size();
+      }
 
       if (mesh->get_num_subd_faces()) {
         Mesh::SubdFace last = mesh->get_subd_face(mesh->get_num_subd_faces() - 1);
@@ -1139,7 +1155,7 @@ void GeometryManager::device_update_mesh(Device *,
 
     packed_float3 *tri_verts = dscene->tri_verts.alloc(tri_size * 3);
     uint *tri_shader = dscene->tri_shader.alloc(tri_size);
-    packed_float3 *vnormal = dscene->tri_vnormal.alloc(vert_size);
+    packed_float3 *vnormal = dscene->tri_vnormal.alloc(normals_size);
     uint4 *tri_vindex = dscene->tri_vindex.alloc(tri_size);
     uint *tri_patch = dscene->tri_patch.alloc(tri_size);
     float2 *tri_patch_uv = dscene->tri_patch_uv.alloc(vert_size);
@@ -1160,7 +1176,7 @@ void GeometryManager::device_update_mesh(Device *,
         }
 
         if (mesh->verts_is_modified() || copy_all_data) {
-          mesh->pack_normals(&vnormal[mesh->vert_offset]);
+          mesh->pack_normals(&vnormal[mesh->normals_offset]);
         }
 
         if (mesh->verts_is_modified() || mesh->triangles_is_modified() ||
@@ -1185,6 +1201,28 @@ void GeometryManager::device_update_mesh(Device *,
     dscene->tri_vindex.copy_to_device_if_modified();
     dscene->tri_patch.copy_to_device_if_modified();
     dscene->tri_patch_uv.copy_to_device_if_modified();
+
+    /* Updating the normal buffer offset to be indexed by object */
+    uint* vnormal_offset = dscene->object_vnormal_offset.alloc(scene->objects.size());
+    for (size_t i = 0; i < scene->objects.size(); ++i) {
+      const Geometry* geom = scene->objects[i]->geometry;
+      if (geom && geom->geometry_type == Geometry::MESH) {
+        const Mesh* mesh = static_cast<const Mesh *>(geom);
+
+        /* Start of the normal buffer or the geometry */
+        vnormal_offset[i] = mesh->normals_offset;
+
+        /* Since the vertex/prim indices are global, we add the offset
+         * correction here */
+        if (mesh->attributes.find(ATTR_STD_CORNER_NORMAL)) {
+          vnormal_offset[i] -= 3 * mesh->prim_offset; /* Corner attribute */
+        } else {
+          vnormal_offset[i] -= mesh->vert_offset; /* Vertex attribute*/
+        }
+      }
+    }
+
+    dscene->object_vnormal_offset.copy_to_device_if_modified();
   }
 
   if (curve_segment_size != 0) {
@@ -2135,6 +2173,7 @@ void GeometryManager::device_update(Device *device,
   dscene->tri_vindex.clear_modified();
   dscene->tri_patch.clear_modified();
   dscene->tri_vnormal.clear_modified();
+  dscene->object_vnormal_offset.clear_modified();
   dscene->tri_patch_uv.clear_modified();
   dscene->curves.clear_modified();
   dscene->curve_keys.clear_modified();
@@ -2163,6 +2202,7 @@ void GeometryManager::device_free(Device *device, DeviceScene *dscene, bool forc
   dscene->tri_verts.free_if_need_realloc(force_free);
   dscene->tri_shader.free_if_need_realloc(force_free);
   dscene->tri_vnormal.free_if_need_realloc(force_free);
+  dscene->object_vnormal_offset.free_if_need_realloc(force_free);
   dscene->tri_vindex.free_if_need_realloc(force_free);
   dscene->tri_patch.free_if_need_realloc(force_free);
   dscene->tri_patch_uv.free_if_need_realloc(force_free);

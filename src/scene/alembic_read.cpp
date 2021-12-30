@@ -147,42 +147,51 @@ static void compute_vertex_normals(CachedData &cache, double current_time)
   attr_normal.data.add_data(attr_data, current_time);
 }
 
-static void add_normals(const Int32ArraySamplePtr face_indices,
-                        const IN3fGeomParam &normals,
+static void add_normals(const IN3fGeomParam &normals,
                         double time,
-                        CachedData &cached_data)
+                        CachedData &cached_data,
+                        const bool do_triangles)
 {
   switch (normals.getScope()) {
     case kFacevaryingScope: {
+      /* Subd FaceVarying normals not supported */
+      if (!do_triangles) {
+        return;
+      }
+      const array<int> *uv_loops = cached_data.uv_loops.data_for_time_no_check(time).get_data_or_null();
+      /* It's ok to not have loop indices, as long as the scope is not face-varying. */
+      if (!uv_loops) {
+        return;
+      }
+
       const ISampleSelector iss = ISampleSelector(time);
-      const IN3fGeomParam::Sample sample = normals.getExpandedValue(iss);
+      const IN3fGeomParam::Sample sample = normals.getIndexedValue(iss);
 
       if (!sample.valid()) {
         return;
       }
 
-      CachedData::CachedAttribute &attr = cached_data.add_attribute(ustring(normals.getName()),
+      CachedData::CachedAttribute &attr = cached_data.add_attribute(ustring("Nc"),
                                                                     *normals.getTimeSampling());
-      attr.std = ATTR_STD_VERTEX_NORMAL;
+      attr.std = ATTR_STD_CORNER_NORMAL;
 
-      const array<float3> *vertices =
-          cached_data.vertices.data_for_time_no_check(time).get_data_or_null();
-
-      if (!vertices) {
+      const array<int3> *triangles = cached_data.triangles.data_for_time_no_check(time).get_data_or_null();
+      if(!triangles) {
         return;
       }
 
       array<char> data;
-      data.resize(vertices->size() * sizeof(float3));
+      data.resize(triangles->size() * 3 * sizeof(float3));
 
       float3 *data_float3 = reinterpret_cast<float3 *>(data.data());
 
-      const int *face_indices_array = face_indices->get();
-      const N3fArraySamplePtr values = sample.getVals();
+      const uint32_t *indices = sample.getIndices()->get();
+      const Imath::V3f *values = sample.getVals()->get();
 
-      for (size_t i = 0; i < face_indices->size(); ++i) {
-        int point_index = face_indices_array[i];
-        data_float3[point_index] = make_float3_from_yup(values->get()[i]);
+      for (const int uv_loop_index : *uv_loops) {
+        const uint32_t index = indices[uv_loop_index];
+        Imath::V3f normal(values[index][0], values[index][1], values[index][2]);
+        *data_float3++ = make_float3_from_yup(normal);
       }
 
       attr.data.add_data(data, time);
@@ -354,9 +363,8 @@ static void read_poly_mesh_geometry(CachedData &cached_data,
   const Int32ArraySamplePtr face_indices = data.face_indices.getValue(iss);
 
   /* Only copy triangles for other frames if the topology is changing over time as well. */
+  bool do_triangles = true;
   if (data.topology_variance != kHomogeneousTopology || cached_data.triangles.size() == 0) {
-    bool do_triangles = true;
-
     /* Compare key with last one to check whether the topology changed. */
     if (cached_data.triangles.size() > 0) {
       const ArraySample::Key key = face_indices->getKey();
@@ -386,7 +394,7 @@ static void read_poly_mesh_geometry(CachedData &cached_data,
   }
 
   if (data.normals.valid()) {
-    add_normals(face_indices, data.normals, time, cached_data);
+    add_normals(data.normals, time, cached_data, do_triangles);
   }
   else {
     compute_vertex_normals(cached_data, time);
